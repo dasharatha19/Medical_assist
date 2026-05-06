@@ -1,0 +1,68 @@
+# REMINDER, BOOKING, AND FINALIZATION PROMPTS
+# Purpose: Booking process, reminder setup, final confirmation messages
+# Used by: reminder_node.py
+# =====================================================================
+
+## FINALIZATION SECTION
+[SECTION: HEADER]
+----------------------------------------------------------------------
+FINALIZING APPOINTMENT
+----------------------------------------------------------------------
+
+[STATUS: BOOKING]
+Booking appointment...
+
+[FEEDBACK: BOOKING_SUCCESS]
+✓ Appointment booked successfully!
+
+[ERROR: BOOKING_FAILED]
+❌ Booking failed: {error_message}
+
+## REMINDER SETUP
+[STATUS: REMINDER_SETUP]
+Setting up appointment reminders...
+
+[FEEDBACK: REMINDERS_SUCCESS]
+✓ Reminders setup successfully!
+
+[FEEDBACK: REMINDERS_INFO]
+⚠ Reminder setup status: {reminder_message}
+
+## FINAL CONFIRMATION DISPLAY
+[SECTION: FINAL_CONFIRMATION]
+======================================================================
+APPOINTMENT CONFIRMED
+======================================================================
+
+[DISPLAY: APPOINTMENT_ID]
+Appointment ID: {appointment_id}
+
+[DISPLAY: DOCTOR]
+Doctor: {doctor_name}
+
+[DISPLAY: DATE]
+Date: {appointment_date}
+
+[DISPLAY: TIME]
+Time: {appointment_time}
+
+[DISPLAY: DURATION]
+Duration: {duration_minutes} minutes
+
+[DISPLAY: INSURANCE]
+Insurance: {insurance_carrier}
+
+[DISPLAY: REMINDERS]
+Reminders: {reminder_count} notifications will be sent
+
+[FEEDBACK: THANK_YOU]
+Thank you for scheduling your appointment!
+
+======================================================================
+
+## ERROR AND WARNING MESSAGES
+[WARNING: NOT_CONFIRMED]
+⚠ Warning: Attempted to book without confirmation
+
+[ERROR: BOOKING_INCOMPLETE]
+❌ Booking failed - workflow ended

@@ -1,0 +1,15 @@
+# SYSTEM PROMPTS
+# Purpose: Welcome message, system initialization, and general workflow instructions
+# Used by: greeting_node.py
+# =====================================================================
+
+## GREETING MESSAGE
+Welcome header displayed at workflow start:
+[SECTION: HEADER]
+======================================================================
+               MEDICAL APPOINTMENT SCHEDULING AGENT
+======================================================================
+
+[SECTION: WELCOME]
+Welcome! I'm here to help you schedule a medical appointment.
+Let's get started...

@@ -1,0 +1,33 @@
+[theme]
+# Streamlit theme configuration
+primaryColor = "#0066BB"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F6F7"
+textColor = "#31333F"
+font = "sans serif"
+
+[client]
+# Client-side settings
+showErrorDetails = true
+toolbarMode = "developer"
+
+[logger]
+# Logging configuration
+level = "info"
+
+[ui]
+# UI behavior
+hideTopBar = false
+hideFooterMenu = false
+
+[browser]
+# Browser behavior
+gatherUsageStats = false
+serverAddress = "localhost"
+
+[server]
+# Server configuration
+port = 8501
+headless = false
+enableXsrfProtection = true
+maxUploadSize = 200

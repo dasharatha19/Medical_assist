@@ -1,0 +1,32 @@
+# CONFIRMATION AND REVIEW PROMPTS
+# Purpose: Appointment review, user confirmation, workflow control
+# Used by: confirmation_node.py
+# =====================================================================
+
+## CONFIRMATION SECTION
+[SECTION: HEADER]
+----------------------------------------------------------------------
+APPOINTMENT CONFIRMATION
+----------------------------------------------------------------------
+
+[SECTION: REVIEW_INSTRUCTION]
+Please review the appointment details above.
+
+To proceed with this appointment, you must confirm.
+
+[PROMPT: CONFIRMATION_QUESTION]
+Do you confirm this appointment? (yes/no): 
+
+## CONFIRMATION RESULTS
+[FEEDBACK: CONFIRMED]
+✓ Appointment confirmed!
+
+[FEEDBACK: NOT_CONFIRMED]
+❌ Appointment not confirmed - canceling workflow
+
+[ERROR: INVALID_CONFIRMATION]
+❌ Please answer 'yes' or 'no'
+
+## SUMMARY SECTION
+[NOTE: SUMMARY_DISPLAY]
+Appointment summary will be displayed here (from state.get_summary())

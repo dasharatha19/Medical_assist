@@ -1,0 +1,187 @@
+# ################################################################################
+# # Medical Appointment Scheduler - Requirements
+# # Project: AI-powered medical appointment booking system with LangGraph agents
+# # Date: April 2, 2026
+# # Python Version: 3.10+
+# ################################################################################
+
+# # =====================================
+# # CORE AGENT ORCHESTRATION
+# # =====================================
+# # LangGraph: Graph-based agent framework for multi-step workflows
+# langgraph>=0.1.0
+
+# # LangChain: Language model infrastructure
+# langchain>=0.1.0
+# langchain-core>=0.1.0
+
+# # =====================================
+# # LLM INTEGRATION & NLP
+# # =====================================
+# # Google Generative AI: Gemini API for natural language processing
+# google-generativeai>=0.7.0
+
+# # =====================================
+# # WEB INTERFACE & DISPLAY
+# # =====================================
+# # Streamlit: Interactive web application framework
+# streamlit>=1.28.0
+
+# # =====================================
+# # DATA PROCESSING & STORAGE
+# # =====================================
+# # Pandas: Data manipulation and analysis
+# pandas>=2.0.0
+
+# # OpenPyXL: Read/write Excel 2010+ (.xlsx) files
+# openpyxl>=3.1.0
+
+# # =====================================
+# # DATETIME & TIMEZONE HANDLING
+# # =====================================
+# # Python-dateutil: Extensions to the standard datetime module
+# python-dateutil>=2.8.2
+
+# # PyTZ: World timezone database
+# pytz>=2024.1
+
+# # =====================================
+# # HTTP & API CALLS
+# # =====================================
+# # Requests: HTTP library for Python
+# requests>=2.31.0
+
+# # =====================================
+# # DATA VALIDATION & SERIALIZATION
+# # =====================================
+# # Pydantic: Data validation using Python type annotations
+# pydantic>=2.0.0
+
+# # =====================================
+# # OPTIONAL: DEVELOPMENT & TESTING
+# # =====================================
+# # pytest: Testing framework (optional, for development)
+# # pytest>=7.0.0
+
+# # pytest-cov: Code coverage for pytest (optional)
+# # pytest-cov>=4.0.0
+
+# # Black: Code formatter (optional)
+# # black>=23.0.0
+
+# # Flake8: Code style checker (optional)
+# # flake8>=6.0.0
+
+# ################################################################################
+# # NOTES:
+# # ───────────────────────────────────────────────────────────────────────────
+# # Python Standard Library (included, no installation needed):
+# #   - dataclasses: State management for workflow
+# #   - typing: Type annotations and type hints
+# #   - sys: System-specific parameters and functions
+# #   - io: I/O operations and redirection
+# #   - datetime: Date and time handling
+# #   - json: JSON serialization/deserialization
+# #   - os: Operating system operations
+# #   - pathlib: Object-oriented filesystem path handling
+# #   - sqlite3: Lightweight database
+# #
+# # Version Management:
+# #   - All dependencies use >= to allow minor/patch updates
+# #   - Major versions are locked to ensure compatibility
+# #   - See COMPATIBILITY_NOTES.md for version constraints
+# #
+# # Installation:
+# #   - Fresh environment: pip install -r requirements.txt
+# #   - Upgrade existing: pip install -r requirements.txt --upgrade
+# #   - Development environment: pip install -r requirements.txt pylint pytest
+# #
+# # Troubleshooting:
+# #   - If conflicts arise, use: pip install -r requirements.txt --force-reinstall
+# #   - For specific versions, edit this file and re-run pip install
+# #   - Check Python version: python --version (should be 3.10+)
+# #
+# # ───────────────────────────────────────────────────────────────────────────
+# ################################################################################
+
+
+################################################################################
+# Medical Appointment Scheduler - Requirements (COMPLETE)
+# Project: AI-powered medical appointment booking system with LangGraph agents
+# Updated: April 30, 2026
+# Python Version: 3.10+
+################################################################################
+
+# =====================================
+# CORE AGENT ORCHESTRATION
+# =====================================
+langgraph>=0.1.0
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-google-genai>=0.0.2  # ADDED - Required for Gemini integration
+
+# =====================================
+# LLM INTEGRATION & NLP
+# =====================================
+google-generativeai>=0.7.0
+
+# =====================================
+# WEB INTERFACE & DISPLAY
+# =====================================
+streamlit>=1.28.0
+
+# =====================================
+# DATA PROCESSING & STORAGE
+# =====================================
+pandas>=2.0.0
+openpyxl>=3.1.0
+numpy>=1.24.0  # ADDED - Pandas dependency
+
+# =====================================
+# DATETIME & TIMEZONE HANDLING
+# =====================================
+python-dateutil>=2.8.2
+pytz>=2024.1
+
+# =====================================
+# HTTP & API CALLS
+# =====================================
+requests>=2.31.0
+
+# =====================================
+# DATA VALIDATION & SERIALIZATION
+# =====================================
+pydantic>=2.0.0
+pydantic-core>=2.0.0  # ADDED - Pydantic dependency
+
+# =====================================
+# ENVIRONMENT & CONFIGURATION
+# =====================================
+python-dotenv>=1.0.0  # ADDED - For .env file loading
+
+# =====================================
+# EMAIL HANDLING (Standard Library - No install needed)
+# =====================================
+# smtplib - Built-in
+# email - Built-in
+
+# =====================================
+# UTILITIES
+# =====================================
+typing-extensions>=4.8.0  # ADDED - For typing support
+
+################################################################################
+# INSTALLATION COMMANDS:
+# ───────────────────────────────────────────────────────────────────────────
+# Fresh install:
+#   pip install -r requirements.txt
+#
+# With specific Python version:
+#   python -m pip install -r requirements.txt
+#
+# If conflicts occur:
+#   pip install --no-cache-dir -r requirements.txt --force-reinstall
+#
+# For development (optional):
+#   pip install pytest pytest-cov black flake8
+################################################################################

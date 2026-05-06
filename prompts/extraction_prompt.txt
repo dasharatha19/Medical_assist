@@ -1,0 +1,47 @@
+# EXTRACTION AND DATA COLLECTION PROMPTS
+# Purpose: Patient information collection, validation prompts, and feedback
+# Used by: patient_lookup_node.py
+# =====================================================================
+
+## PATIENT INFORMATION SECTION
+[SECTION: HEADER]
+----------------------------------------------------------------------
+PATIENT INFORMATION
+----------------------------------------------------------------------
+
+[PROMPT: NAME]
+Your full name: 
+
+[PROMPT: DATE_OF_BIRTH]
+Date of birth (YYYY-MM-DD): 
+
+[PROMPT: PATIENT_LOOKUP_PROCESSING]
+(Looking up patient...)
+
+[FEEDBACK: PATIENT_FOUND]
+✓ Welcome back! Your patient ID: {patient_id}
+  Previous appointments: {appointment_count}
+  Appointment duration: {duration_minutes} minutes ({patient_type})
+
+[FEEDBACK: PATIENT_NEW]
+✓ New patient registered! Your patient ID: {patient_id}
+  Appointment duration: {duration_minutes} minutes ({patient_type})
+
+## CONTACT INFORMATION SECTION
+[SECTION: CONTACT_HEADER]
+----------------------------------------------------------------------
+CONTACT INFORMATION
+----------------------------------------------------------------------
+
+[PROMPT: EMAIL]
+Email address: 
+
+[PROMPT: PHONE]
+Phone number: 
+
+## ERROR MESSAGES
+[ERROR: INVALID_INPUT]
+❌ {error_message}
+
+[SUCCESS: CONTACT_CONFIRMED]
+✓ Contact information saved

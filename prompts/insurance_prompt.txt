@@ -1,0 +1,59 @@
+# INSURANCE AND COVERAGE PROMPTS
+# Purpose: Insurance verification, carrier selection, member ID collection
+# Used by: insurance_node.py
+# =====================================================================
+
+## INSURANCE INFORMATION SECTION
+[SECTION: HEADER]
+----------------------------------------------------------------------
+INSURANCE INFORMATION
+----------------------------------------------------------------------
+
+[PROMPT: INSURANCE_QUESTION]
+Do you have insurance? (yes/no): 
+
+[FEEDBACK: NO_INSURANCE]
+⚠ No insurance provided - continuing without coverage details...
+
+## CARRIER SELECTION
+[SECTION: CARRIERS]
+Valid insurance carriers:
+
+[PROMPT: CARRIER_SELECTION]
+Select insurance carrier (number): 
+
+[FEEDBACK: CARRIER_SELECTED]
+✓ Selected: {carrier_name}
+
+## MEMBER DETAILS
+[PROMPT: MEMBER_ID]
+Insurance member ID: 
+
+[PROMPT: GROUP_ID]
+Insurance group ID (or press Enter to skip): 
+
+[FEEDBACK: GROUP_ID_SKIPPED]
+⚠ Group ID skipped
+
+## INSURANCE VALIDATION
+[STATUS: VALIDATING]
+Validating insurance information...
+
+[FEEDBACK: INSURANCE_VALID]
+✓ Insurance information validated successfully
+
+[FEEDBACK: INSURANCE_INVALID]
+⚠ {validation_message}
+
+## ERROR HANDLING
+[ERROR: INVALID_YES_NO_RESPONSE]
+❌ Please answer 'yes' or 'no'
+
+[ERROR: INVALID_SELECTION]
+❌ Invalid selection
+
+[ERROR: INVALID_INPUT_NUMBER]
+❌ Please enter a number
+
+[ERROR: INVALID_INPUT]
+❌ {error_message}

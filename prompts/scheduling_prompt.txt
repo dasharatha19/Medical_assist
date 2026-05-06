@@ -1,0 +1,61 @@
+# SCHEDULING AND APPOINTMENT SELECTION PROMPTS
+# Purpose: Doctor selection, date/time selection, availability checking
+# Used by: scheduling_node.py
+# =====================================================================
+
+## APPOINTMENT SCHEDULING SECTION
+[SECTION: HEADER]
+----------------------------------------------------------------------
+APPOINTMENT SCHEDULING
+----------------------------------------------------------------------
+
+[SECTION: DOCTOR_SELECTION]
+Available doctors:
+
+[PROMPT: DOCTOR_SELECTION]
+Select doctor (number): 
+
+[FEEDBACK: DOCTOR_SELECTED]
+✓ Selected: {doctor_name}
+
+[PROMPT: APPOINTMENT_DATE]
+Preferred appointment date (YYYY-MM-DD): 
+
+[STATUS: CHECKING_AVAILABILITY]
+Checking availability...
+
+## AVAILABILITY RESULTS
+[FEEDBACK: AVAILABILITY_FOUND]
+✓ Available slots on {appointment_date}:
+
+[ERROR: NO_AVAILABILITY]
+❌ {error_message}
+
+[PROMPT: RETRY_SCHEDULING]
+Would you like to try a different date? (yes/no): 
+
+[FEEDBACK: RETRY_CONFIRMED]
+Retrying scheduling...
+
+[FEEDBACK: RETRY_CANCELLED]
+Canceling appointment scheduling...
+
+## TIME SLOT SELECTION
+[SECTION: SLOT_SELECTION]
+(slot list shown here)
+
+[PROMPT: SLOT_SELECTION]
+Select time slot (number): 
+
+[FEEDBACK: SLOT_SELECTED]
+✓ Selected: {appointment_date} at {selected_time}
+
+## ERROR HANDLING
+[ERROR: INVALID_SELECTION]
+❌ Invalid selection
+
+[ERROR: INVALID_INPUT_NUMBER]
+❌ Please enter a number
+
+[ERROR: INVALID_INPUT]
+❌ {error_message}

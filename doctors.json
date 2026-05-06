@@ -1,0 +1,41 @@
+{
+  "Dr. John Smith": {
+    "location": "Downtown Clinic",
+    "specialization": "General Practice",
+    "working_hours": {
+      "start": "09:00",
+      "end": "17:00"
+    },
+    "break_time": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "appointments": []
+  },
+  "Dr. Sarah Johnson": {
+    "location": "Westside Medical Center",
+    "specialization": "Cardiology",
+    "working_hours": {
+      "start": "08:00",
+      "end": "16:00"
+    },
+    "break_time": {
+      "start": "12:00",
+      "end": "13:00"
+    },
+    "appointments": []
+  },
+  "Dr. Michael Brown": {
+    "location": "Downtown Clinic",
+    "specialization": "Orthopedics",
+    "working_hours": {
+      "start": "10:00",
+      "end": "18:00"
+    },
+    "break_time": {
+      "start": "13:00",
+      "end": "14:00"
+    },
+    "appointments": []
+  }
+}
