@@ -10,7 +10,38 @@
       "start": "12:00",
       "end": "13:00"
     },
-    "appointments": []
+    "appointments": [
+      {
+        "patient_id": "P20260506165505",
+        "datetime": "2026-05-11 10:30",
+        "duration": 60,
+        "booked_at": "2026-05-07T11:30:01.292912"
+      },
+      {
+        "patient_id": "P20260506165505",
+        "datetime": "2026-05-11 09:30",
+        "duration": 60,
+        "booked_at": "2026-05-07T11:41:04.130369"
+      },
+      {
+        "patient_id": "P20260506165505",
+        "datetime": "2026-05-11 10:00",
+        "duration": 60,
+        "booked_at": "2026-05-07T11:51:08.595962"
+      },
+      {
+        "patient_id": "P20260506165505",
+        "datetime": "2026-05-08 09:30",
+        "duration": 60,
+        "booked_at": "2026-05-07T11:57:32.127615"
+      },
+      {
+        "patient_id": "P20260506165505",
+        "datetime": "2026-05-11 11:00",
+        "duration": 60,
+        "booked_at": "2026-05-07T12:06:39.803861"
+      }
+    ]
   },
   "Dr. Sarah Johnson": {
     "location": "Westside Medical Center",
@@ -23,7 +54,20 @@
       "start": "12:00",
       "end": "13:00"
     },
-    "appointments": []
+    "appointments": [
+      {
+        "patient_id": "P20260506165505",
+        "datetime": "2026-05-11 08:30",
+        "duration": 60,
+        "booked_at": "2026-05-07T11:09:18.789628"
+      },
+      {
+        "patient_id": "P20260507112813",
+        "datetime": "2026-05-15 09:00",
+        "duration": 60,
+        "booked_at": "2026-05-07T11:28:55.428447"
+      }
+    ]
   },
   "Dr. Michael Brown": {
     "location": "Downtown Clinic",

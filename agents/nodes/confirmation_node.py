@@ -89,6 +89,9 @@ def confirmation_node(state: SchedulerState) -> SchedulerState:
     # STEP 2: COLLECT YES/NO CONFIRMATION
     # =========================================================================
     if state.get("confirmation_step") == "collect_confirmation":
+        if not user_input:
+            state["response"] = "✅ Would you like to **confirm** this appointment? *(yes/no)*"
+            return state
         is_valid, is_affirmative = ConfirmationValidator.validate_yes_no_response(user_input)
 
         if not is_valid:

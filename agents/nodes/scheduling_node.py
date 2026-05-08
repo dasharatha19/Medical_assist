@@ -234,16 +234,17 @@ def scheduling_node(state: SchedulerState) -> SchedulerState:
                     state["response"] ="❌ Appointment duration error. Please restart."
                     return state
 
-                state["scheduling_step"] ="done"
-                state["current_step"] ="insurance"
-                logger.info(f"Slot selected: {state.get("selected_time")} on {state.get("appointment_date")}")
-                state["response"] =(
+                state["scheduling_step"] = "done"
+                state["current_step"] = "insurance"
+                state["insurance_step"] = "collect_coverage_answer"
+                logger.info(f"Slot selected: {state.get('selected_time')} on {state.get('appointment_date')}")
+                state["response"] = (
                     f"✅ **Appointment Scheduled!**\n\n"
-                    f"**Doctor:** {state.get("preferred_doctor")}\n"
-                    f"**Date:** {state.get("appointment_date")}\n"
-                    f"**Time:** {state.get("selected_time")}\n"
-                    f"**Duration:** {state.get("appointment_duration")} minutes\n\n"
-                    "Now let's collect your **insurance information**. 🏥"
+                    f"**Doctor:** {state.get('preferred_doctor')}\n"
+                    f"**Date:** {state.get('appointment_date')}\n"
+                    f"**Time:** {state.get('selected_time')}\n"
+                    f"**Duration:** {state.get('appointment_duration')} minutes\n\n"
+                    "🏥 Do you have health insurance? *(yes/no)*"
                 )
                 return state
             else:

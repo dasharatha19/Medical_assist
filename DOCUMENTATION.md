@@ -2,10 +2,16 @@
 
 **Project:** AI-Powered Medical Appointment Scheduling System  
 **Framework:** LangGraph + LangChain + Streamlit  
-**Date:** May 6, 2026  
+**Date:** May 7, 2026  
 **Status:** 🟡 70% Complete - Core workflow functional, final integrations in progress
 
-> 📌 **QUICK REFERENCE:** For project completion status, next steps, and what still needs to be done, see [PROJECT_STATUS.md](PROJECT_STATUS.md) - this is the comprehensive handoff guide.
+### 📌 Quick Links for Different Needs:
+- **👉 START HERE (New Developer):** [PROJECT_STATUS.md](PROJECT_STATUS.md) - Handoff guide with what's done, what's left, and next steps
+- **📋 Setup Instructions:** [README.md](README.md) - Getting started in 5-20 minutes
+- **🏗️ Architecture Details:** [TECHNICAL_APPROACH_DOCUMENT.md](TECHNICAL_APPROACH_DOCUMENT.md) - Framework choices and design decisions
+- **📚 Deep Dive:** This file - Complete codebase reference
+
+> **TL;DR:** All core agents work. Patient lookup, scheduling, insurance, confirmation nodes are production-ready. Remaining: Email integration, form interface, demo video. See PROJECT_STATUS.md for next steps.
 
 This document provides an in-depth guide to understanding the entire codebase. Start with the section that matches your learning goal.
 

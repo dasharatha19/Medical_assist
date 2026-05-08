@@ -15,7 +15,10 @@ from agents.nodes.reminder_node import reminder_node
 from agents.nodes.form_distribution_node import form_distribution_node
 from agents.nodes.scheduling_node import scheduling_node
 from agents.nodes.insurance_node import insurance_node
-
+from agents.nodes.confirmation_node import confirmation_node
+from agents.nodes.reminder_node import reminder_node
+import traceback
+from agents.nodes.form_distribution_node import form_distribution_node
 class SessionManager:
 
     def __init__(self):
@@ -115,6 +118,11 @@ class SessionManager:
         if self.agent_state is None:
             self.agent_state = {}
 
+        # Don't process empty input from user
+        if not user_input.strip() and self.agent_state:
+            response = self.agent_state.get("response", "")
+            return response, self.workflow_complete
+
         self.agent_state["user_input"] = user_input
 
         try:
@@ -122,7 +130,7 @@ class SessionManager:
             result = node_fn(self.agent_state)
             self.agent_state.update(result)
 
-    # Auto-trigger lookup without waiting for user input
+            # Auto-trigger lookup without waiting for user input
             if self.agent_state.get("collecting_step") == "lookup":
                 self.agent_state["user_input"] = ""
                 result2 = patient_lookup_node(self.agent_state)
@@ -134,24 +142,60 @@ class SessionManager:
                 self.agent_state["user_input"] = ""
                 result3 = scheduling_node(self.agent_state)
                 self.agent_state.update(result3)
+            
+            # Auto-trigger insurance first question (only on fresh entry)
+            if self.agent_state.get("current_step") == "insurance" and \
+               not self.agent_state.get("insurance_step"):
+                self.agent_state["user_input"] = ""
+                result4 = insurance_node(self.agent_state)
+                self.agent_state.update(result4)
+            
+            # Auto-trigger confirmation summary (only on fresh entry)
+            if self.agent_state.get("current_step") == "confirmation" and \
+               not self.agent_state.get("confirmation_step"):
+                self.agent_state["user_input"] = ""
+                result5 = confirmation_node(self.agent_state)
+                self.agent_state.update(result5)
+            
+            # Auto-trigger reminders after confirmation
+            if self.agent_state.get("current_step") == "reminders" and \
+               self.agent_state.get("booking_confirmed") and \
+               not self.agent_state.get("booking_success"):
+                self.agent_state["user_input"] = ""
+                result6 = reminder_node(self.agent_state)
+                self.agent_state.update(result6)
+            
+            # Auto-trigger form distribution
+            if self.agent_state.get("current_step") == "form_distribution" and \
+               not self.agent_state.get("form_distribution_status"):
+                self.agent_state["user_input"] = ""
+                result7 = form_distribution_node(self.agent_state)
+                self.agent_state.update(result7)
 
             self.workflow_complete = self.agent_state.get("workflow_complete", False)
             response = self.agent_state.get("response", "").strip()
 
-            # Safety net — if response is empty, generate it based on collecting_step
             if not response:
                 step = self.agent_state.get("collecting_step", "")
+                insurance_step = self.agent_state.get("insurance_step", "")
                 fallbacks = {
                     "phone": "📞 Please enter your **phone number**:",
                     "email": "📧 Please enter your **email address**:",
                     "dob":   "📅 What is your **date of birth**? (YYYY-MM-DD)",
                     "name":  "👤 Please enter your **full name**:",
-                    "done":  "✅ All info collected! Moving to scheduling...",
                 }
-                response = fallbacks.get(step, "⚠️ Something went wrong, please try again.")
-
+                insurance_fallbacks = {
+                    "collect_member_id": "💳 Please enter your **Member ID**:",
+                    "collect_group_id":  "🔢 Please enter your **Group ID**:",
+                    "collect_other_carrier": "✏️ Please type your **insurance carrier name**:",
+                }
+                if step in fallbacks:
+                    response = fallbacks[step]
+                elif insurance_step in insurance_fallbacks:
+                    response = insurance_fallbacks[insurance_step]
+                else:
+                    response = ""
         except Exception as e:
-            import traceback
             error_msg = f"❌ Error: {e}\n```\n{traceback.format_exc()}\n```"
             return error_msg, False
 

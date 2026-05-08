@@ -23,6 +23,7 @@ from app.ui_components import (
     render_workflow_status,
     render_input_form,
     render_sidebar_info,
+    render_typing_indicator,
     format_agent_output
 )
 import streamlit as st
@@ -74,17 +75,41 @@ def handle_user_input(manager: SessionManager) -> bool:
     if user_input is None:
         return False
 
-    # Show user message in chat immediately
+    # Add user message
     manager.add_message("user", user_input)
+    
+    return True  # rerun first to show user message
 
-    # Run agent with this input — pass user_input directly
-    response, workflow_complete = manager.run_agent_step(user_input)
 
-    # Show agent response
+def process_pending_input(manager: SessionManager) -> None:
+    """Process the last user message and show typing indicator in chat."""
+    messages = manager.get_conversation_history()
+    
+    # Check if last message is from user and needs processing
+    if not messages or messages[-1]['role'] != 'user':
+        return
+    
+    last_input = messages[-1]['content']
+    
+    # Show typing indicator in chat area
+    typing_placeholder = st.empty()
+    typing_placeholder.markdown("""
+    <div class="msg-row-bot">
+        <div class="avatar-bot">🤖</div>
+        <div class="typing-dots">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Run agent
+    response, workflow_complete = manager.run_agent_step(last_input)
+    
+    # Clear typing indicator
+    typing_placeholder.empty()
+    
     if response:
         manager.add_message("assistant", response)
-
-    return True
 
 
 def display_status_panel(manager: SessionManager) -> None:
@@ -115,6 +140,117 @@ def handle_reset_conversation(manager: SessionManager) -> None:
     manager.reset_conversation()
     st.rerun()
 
+def render_quick_replies(manager: SessionManager) -> bool:
+    messages = manager.get_conversation_history()
+    if not messages or messages[-1]['role'] != 'assistant':
+        return False
+    if manager.workflow_complete:
+        return False
+
+    last_msg = messages[-1]['content']
+    last_msg_lower = last_msg.lower()
+    state = manager.agent_state or {}
+
+    # ── YES/NO questions ──
+    if any(x in last_msg_lower for x in ['yes/no', 'health insurance', 'confirm this appointment']):
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Yes", use_container_width=True, key="qr_yes"):
+                return _send_quick_reply(manager, "yes")
+        with col2:
+            if st.button("❌ No", use_container_width=True, key="qr_no"):
+                return _send_quick_reply(manager, "no")
+
+    # ── Cancellation reason ──
+    elif 'declining' in last_msg_lower:
+        cols = st.columns(3)
+        options = ["Personal reasons", "Found another doctor", "Schedule conflict"]
+        for i, opt in enumerate(options):
+            with cols[i]:
+                if st.button(opt, use_container_width=True, key=f"qr_reason_{i}"):
+                    return _send_quick_reply(manager, opt)
+        # Skip button
+        if st.button("⏭️ Skip (no reason)", use_container_width=True, key="qr_skip"):
+            return _send_quick_reply(manager, "skip")
+
+    # ── Doctor selection ──
+    elif 'available doctors' in last_msg_lower:
+        doctors = state.get("available_doctors", [])
+        for i, doc in enumerate(doctors, 1):
+            label = f"{i}. {doc['name']} - {doc.get('specialization','')} @ {doc.get('location','')}"
+            if st.button(label, use_container_width=True, key=f"qr_doc_{i}"):
+                return _send_quick_reply(manager, str(i))
+
+    # ── Date selection ──
+    elif 'preferred date' in last_msg_lower or 'available dates' in last_msg_lower:
+        import re
+        dates = re.findall(r'\d{4}-\d{2}-\d{2}', last_msg)
+        if dates:
+            cols = st.columns(min(len(dates), 4))
+            for i, date in enumerate(dates[:4]):
+                from datetime import datetime
+                try:
+                    weekday = datetime.strptime(date, "%Y-%m-%d").strftime("%a")
+                    label = f"📅 {date}\n({weekday})"
+                except:
+                    label = f"📅 {date}"
+                with cols[i % 4]:
+                    if st.button(label, use_container_width=True, key=f"qr_date_{i}"):
+                        return _send_quick_reply(manager, date)
+
+    # ── Time slot selection ──
+    elif 'time slot' in last_msg_lower or 'available slots' in last_msg_lower:
+        slots = state.get("available_slots", [])
+        if slots:
+            cols = st.columns(min(len(slots), 4))
+            for i, slot in enumerate(slots, 1):
+                with cols[(i-1) % 4]:
+                    if st.button(f"🕐 {slot}", use_container_width=True, key=f"qr_slot_{i}"):
+                        return _send_quick_reply(manager, str(i))
+
+    return False
+
+
+def _send_quick_reply(manager: SessionManager, value: str) -> bool:
+    """Helper to send a quick reply value."""
+    manager.add_message("user", value)
+    with st.spinner("MediBook is thinking..."):
+        response, wf = manager.run_agent_step(value)
+    if response:
+        manager.add_message("assistant", response)
+    return True
+
+def render_dob_picker(manager: SessionManager) -> bool:
+    """Show date picker for DOB input."""
+    messages = manager.get_conversation_history()
+    if not messages or messages[-1]['role'] != 'assistant':
+        return False
+    
+    last_msg = messages[-1]['content'].lower()
+    state = manager.agent_state or {}
+    
+    # Show date picker when asking for DOB
+    if 'date of birth' in last_msg and state.get('collecting_step') == 'dob':
+        from datetime import date
+        selected_date = st.date_input(
+            "📅 Select your date of birth:",
+            value=date(1990, 1, 1),
+            min_value=date(1920, 1, 1),
+            max_value=date(2010, 12, 31),
+            key="dob_picker"
+        )
+        if st.button("✅ Confirm Date of Birth", use_container_width=True, key="dob_confirm"):
+            dob_str = selected_date.strftime("%Y-%m-%d")
+            manager.add_message("user", dob_str)
+            with st.spinner("MediBook is thinking..."):
+                response, wf = manager.run_agent_step(dob_str)
+            if response:
+                manager.add_message("assistant", response)
+            return True
+    
+    return False
+
+
 
 def main():
     render_page_header()
@@ -133,6 +269,21 @@ def main():
     with chat_col:
         with st.container():
             display_chat_interface(manager)
+
+            # DOB calendar picker
+            if render_dob_picker(manager):
+                st.rerun()
+        
+            # Quick reply buttons
+            if render_quick_replies(manager):
+                st.rerun()
+                
+            # Show typing indicator and process inside chat area
+            if manager.get_conversation_history() and \
+               manager.get_conversation_history()[-1]['role'] == 'user' and \
+               not manager.workflow_complete:
+                process_pending_input(manager)
+                st.rerun()
         st.divider()
         if not manager.workflow_complete:
             st.subheader("💬 Your Response")

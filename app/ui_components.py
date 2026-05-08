@@ -257,6 +257,37 @@ def inject_css() -> None:
     .step-item-done   { opacity: 0.65; }
     .step-item-active { font-weight: 600; }
     .step-item-future { opacity: 0.35; }
+        /* ── Typing indicator ── */
+    .typing-indicator {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 0;
+    }
+    .typing-dots {
+        display: flex;
+        gap: 4px;
+        background: #ffffff;
+        border-radius: 4px 14px 14px 14px;
+        padding: 11px 15px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        border: 0.5px solid #e8edf3;
+    }
+    .typing-dots span {
+        width: 8px;
+        height: 8px;
+        background: #3b9eff;
+        border-radius: 50%;
+        display: inline-block;
+        animation: typingBounce 1.2s infinite ease-in-out;
+    }
+    .typing-dots span:nth-child(1) { animation-delay: 0s; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+        0%, 60%, 100% { opacity: 0.2; transform: scale(0.8); }
+        30% { opacity: 1; transform: scale(1.2); }
+    } 
     </style>
     """, unsafe_allow_html=True)
 
@@ -527,3 +558,15 @@ def format_agent_output(output: str) -> str:
             continue
         cleaned.append(stripped)
     return '\n'.join(cleaned).strip()
+
+
+def render_typing_indicator() -> None:
+    """Show animated typing dots in chat."""
+    st.markdown("""
+    <div class="typing-indicator">
+        <div class="avatar-bot">🤖</div>
+        <div class="typing-dots">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)

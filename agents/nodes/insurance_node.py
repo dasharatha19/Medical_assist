@@ -4,6 +4,7 @@ No print() or input() calls. Everything goes through state.get("response").
 Uses state.get("insurance_step") to track progress across turns.
 """
 import logging
+from secrets import choice
 from agents.state import SchedulerState
 from tools import tools
 from utils import (
@@ -94,11 +95,13 @@ def insurance_node(state: SchedulerState) -> SchedulerState:
             f"  {i}. {c}" for i, c in enumerate(carriers, 1)
         ])
 
-        state["insurance_step"] ="select_carrier"
-        state["carrier_retry"] =0
-        state["response"] =(
+        # Add Other option
+        other_num = len(carriers) + 1
+        state["insurance_step"] = "select_carrier"
+        state["response"] = (
             "🏥 **Available Insurance Carriers:**\n\n"
-            f"{carrier_list}\n\n"
+            f"{carrier_list}\n"
+            f"  {other_num}. Other (type your carrier name)\n\n"
             "Please enter the **number** of your insurance carrier:"
         )
         return state
@@ -111,15 +114,18 @@ def insurance_node(state: SchedulerState) -> SchedulerState:
 
         try:
             choice = int(user_input)
-            if 1 <= choice <= len(carriers):
-                state["insurance_carrier"] =carriers[choice - 1]
-                state["insurance_step"] ="collect_member_id"
-                state["member_retry"] =0
-                logger.info(f"Carrier selected: {state.get("insurance_carrier")}")
-                state["response"] =(
-                    f"✅ Selected: **{state.get("insurance_carrier")}**\n\n"
-                    + get_prompt_text_safe('insurance_prompt', 'MEMBER_ID',
-                                          default='💳 Please enter your **Member ID**:')
+            if choice == len(carriers) + 1:
+                state["insurance_step"] = "collect_other_carrier"
+                state["response"] = "✏️ Please type your **insurance carrier name**:"
+                return state
+            elif 1 <= choice <= len(carriers):
+                state["insurance_carrier"] = carriers[choice - 1]
+                state["insurance_step"] = "collect_member_id"
+                state["member_retry"] = 0
+                logger.info(f"Carrier selected: {state.get('insurance_carrier')}")
+                state["response"] = (
+                    f"✅ Selected: **{state.get('insurance_carrier')}**\n\n"
+                    "💳 Please enter your **Member ID**:"
                 )
                 return state
             else:
@@ -137,13 +143,28 @@ def insurance_node(state: SchedulerState) -> SchedulerState:
                 f"({remaining} attempt(s) left)"
             )
             return state
+        
+    # =========================================================================
+    # STEP 3b: COLLECT OTHER CARRIER NAME
+    # =========================================================================
+    if state.get("insurance_step") == "collect_other_carrier":
+        if user_input:
+            state["insurance_carrier"] = user_input.strip()
+            state["insurance_step"] = "collect_member_id"
+            state["response"] = "💳 Please enter your **Member ID**:"
+            return state
+        else:
+            state["response"] = "⚠️ Please enter your insurance carrier name:"
+            return state
 
     # =========================================================================
     # STEP 4: COLLECT MEMBER ID
     # =========================================================================
     if state.get("insurance_step") == "collect_member_id":
+        if not user_input:
+            state["response"] = "💳 Please enter your **Member ID**:"
+            return state
         valid, result = InsuranceValidator.validate_member_id(user_input)
-
         if valid:
             state["insurance_member_id"] =result
             state["insurance_step"] ="collect_group_id"
@@ -172,8 +193,8 @@ def insurance_node(state: SchedulerState) -> SchedulerState:
     # STEP 5: COLLECT GROUP ID
     # =========================================================================
     if state.get("insurance_step") == "collect_group_id":
-        if not user_input:
-            state["response"] ="⚠️ Group ID is required. Please enter your **Group ID**:"
+        if not user_input or len(user_input) < 3:
+            state["response"] = "🔢 Please enter your **Group ID** (minimum 3 characters):"
             return state
 
         valid, result = InsuranceValidator.validate_group_id(user_input)
