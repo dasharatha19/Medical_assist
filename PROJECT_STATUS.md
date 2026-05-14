@@ -2,7 +2,7 @@
 
 **Project:** AI-Powered Medical Appointment Scheduling System  
 **Framework:** LangGraph + LangChain + Streamlit  
-**Last Updated:** May 7, 2026  
+**Last Updated:** May 8, 2026 - Code Audit Completed  
 **Status:** 🟡 **70% COMPLETE** - Core workflow functional, UI integration in progress
 
 ---
@@ -233,6 +233,85 @@ print(f'Response: {result.get(\"response\")[:100]}...')
   - ✅ Error logging with stack traces
   - ✅ Info logging for workflow progression
   - ✅ Warning logging for validation failures
+
+### 10. **Code Audit Findings** 📋 DOCUMENTED (May 8, 2026)
+- **Scope:** Complete codebase review (48 Python files analyzed)
+- **Purpose:** Identify quality issues, code duplication, and best practice violations
+- **Key Findings:**
+
+#### 🔴 **Critical Issues Found (4)**
+1. **Bare Except Clauses** - 4 locations without specific exception types
+   - `app/main.py` (line 198), `appointment_scheduler_v2.py` (line 54)
+   - `services/report_service.py` (lines 175, 392)
+   - **Fix:** Replace `except:` with `except Exception:`
+
+2. **Duplicate Imports** - Redundant import statements
+   - `app/session_manager.py` - 6 imports duplicated (lines 9-21)
+   - **Fix:** Remove duplicate import lines
+
+3. **Print Statements in Nodes** - Breaks Streamlit UI flow
+   - `agents/nodes/form_distribution_node.py` (lines 61-64)
+   - **Impact:** Output appears in terminal, not chat UI
+   - **Fix:** Replace with `state["response"] = "..."`
+
+4. **Whitespace Issues** - Inconsistent spacing
+   - `agents/nodes/form_distribution_node.py` (line 58)
+   - **Fix:** Normalize spacing around assignment operators
+
+#### 🟡 **Code Quality Issues (20+)**
+1. **Missing Type Hints** - 20+ functions lack return type annotations
+   - `app/conversation_helper.py`, `patient_database.py`, `doctor_availability.py`
+   - **Impact:** Reduces IDE autocomplete, harder to debug
+   - **Priority:** Add to all public functions
+
+2. **Code Duplication** - 8+ retry logic patterns repeated across nodes
+   - Pattern: `state["retry_counter"] = state.get("retry_counter", 0) + 1`
+   - Found in: patient_lookup, scheduling, insurance nodes
+   - **Fix:** Extract into utility function `handle_retry()`
+
+3. **Inconsistent State Field Naming**
+   - Uses: `collecting_step`, `scheduling_step`, `insurance_step`
+   - **Fix:** Standardize to single naming pattern
+
+4. **Broad Exception Catching**
+   - Generic `except Exception as e:` doesn't distinguish error types
+   - Found in: patient_lookup, scheduling, form_distribution
+   - **Fix:** Catch specific exceptions (ValueError, ConnectionError, etc.)
+
+5. **Missing Null/None Checks**
+   - `patient_database.py` - `patient_data.get('name')` assumes 'name' exists
+   - **Impact:** Could raise AttributeError
+   - **Fix:** Add safety checks with `.get()` or None checks
+
+#### 🟢 **Low Priority Issues (10+)**
+1. **Missing Docstrings** - 15+ functions lack documentation
+   - `tools/booking_tool.py`, `tools/notification_tool.py`
+   - `reminder_manager.py`, `form_manager.py`
+   - **Priority:** Medium - helpful but not blocking
+
+2. **Dead/Legacy Code** - 4 files no longer used
+   - `appointment_scheduler.py` (CLI v1), `appointment_scheduler_v2.py` (CLI v2)
+   - `agents_demo.py`, `demo.py`
+   - **Action:** Consider archiving or removing
+
+3. **Type Hint Style Inconsistency**
+   - Mixed Python 3.9 (`Tuple[bool, str]`) and 3.10+ (`tuple[bool, str]`) syntax
+   - **Fix:** Standardize to 3.10+ syntax (project targets 3.10+)
+
+#### 📊 **Audit Summary**
+| Category | Count | Severity | Status |
+|----------|-------|----------|--------|
+| Bare except clauses | 4 | 🔴 CRITICAL | Needs Fix |
+| Duplicate imports | 1 set | 🔴 CRITICAL | Needs Fix |
+| Print statements in nodes | 4 | 🔴 CRITICAL | Needs Fix |
+| Missing type hints | 20+ | 🟡 MEDIUM | Document |
+| Code duplication patterns | 8+ | 🟡 MEDIUM | Refactor |
+| Missing null checks | 5+ | 🟡 MEDIUM | Add |
+| Missing docstrings | 15+ | 🟢 LOW | Enhancement |
+| Dead code files | 4 | 🟢 LOW | Cleanup |
+| **Total Files Analyzed** | **48** | - | ✅ Complete |
+
+**Recommendation:** Schedule code quality improvements for next sprint. Critical issues should be fixed before production deployment.
 
 ---
 

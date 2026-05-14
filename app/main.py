@@ -1,144 +1,136 @@
 """
-Main Streamlit Application
-Entry point for the Medical Appointment Scheduler chat interface
-
-This module:
-1. Initializes the Streamlit page
-2. Manages session state
-3. Displays chat interface
-4. Integrates with the LangGraph agent
-5. Handles conversation flow
+Main Streamlit Application - Three Panel Layout
+Left: Mini sidebar (conversations)
+Center: Chat area
+Right: Progress + Booking status (always visible)
 """
-
 import sys
+import re
+from datetime import datetime, date
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.ui_components import (
-    render_page_header,
-    render_top_bar,
-    render_chat_history,
-    render_chat_message,
-    render_state_info,
-    render_workflow_status,
-    render_input_form,
-    render_sidebar_info,
-    render_typing_indicator,
-    format_agent_output
-)
 import streamlit as st
 from app.session_manager import SessionManager
+from app.ui_components import (
+    render_page_header, render_chat_history,
+    render_input_form, render_sidebar_info,
+    render_right_panel, format_agent_output
+)
 
 
 def initialize_session_state() -> SessionManager:
-    """
-    Initialize or retrieve the session manager from Streamlit session state
-    
-    SessionManager handles:
-    - Conversation history
-    - Agent state
-    - Input/output management
-    - Workflow execution
-    
-    Returns:
-        SessionManager instance
-    """
     if 'session_manager' not in st.session_state:
         st.session_state.session_manager = SessionManager()
-    
     return st.session_state.session_manager
 
 
-def display_chat_interface(manager: SessionManager) -> None:
-    """
-    Display the chat message history from current conversation
-    
-    Shows all messages in chronological order with proper formatting
-    Automatically shows assistant greeting on first load
-    
-    Args:
-        manager: SessionManager with conversation history
-    """
-    # Show initial greeting if this is the first time
+def render_chat_section(manager: SessionManager) -> None:
     manager.show_greeting_if_needed()
-    
-    # Get conversation history
     messages = manager.get_conversation_history()
-    
-    # Display all messages in the conversation (including the initial greeting)
     if messages:
         render_chat_history(messages)
-
-
-def handle_user_input(manager: SessionManager) -> bool:
-    user_input = render_input_form()
-    if user_input is None:
-        return False
-
-    # Add user message
-    manager.add_message("user", user_input)
-    
-    return True  # rerun first to show user message
+    else:
+        # Welcome screen when no chat started
+        st.markdown("""
+        <div style="display:flex;flex-direction:column;align-items:center;
+                    justify-content:center;padding:60px 20px;text-align:center;">
+            <div style="font-size:48px;margin-bottom:16px;">🏥</div>
+            <div style="font-size:24px;font-weight:600;color:#1a1a2e;
+                        margin-bottom:8px;font-family:'Geist Sans',sans-serif;">
+                Hi, I'm MediBook
+            </div>
+            <div style="font-size:15px;color:#64748b;margin-bottom:32px;
+                        font-family:'Geist Sans',sans-serif;">
+                AI-Powered Medical Appointment Scheduling
+            </div>
+            <div style="font-size:14px;color:#94a3b8;font-family:'Geist Sans',sans-serif;">
+                Type your full name below to get started ↓
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 def process_pending_input(manager: SessionManager) -> None:
-    """Process the last user message and show typing indicator in chat."""
     messages = manager.get_conversation_history()
-    
-    # Check if last message is from user and needs processing
     if not messages or messages[-1]['role'] != 'user':
         return
-    
     last_input = messages[-1]['content']
-    
-    # Show typing indicator in chat area
-    typing_placeholder = st.empty()
-    typing_placeholder.markdown("""
-    <div class="msg-row-bot">
-        <div class="avatar-bot">🤖</div>
-        <div class="typing-dots">
-            <span></span><span></span><span></span>
+    typing = st.empty()
+    typing.markdown("""
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+        <div style="width:34px;height:34px;border-radius:50%;
+                    background:linear-gradient(135deg,#7c3aed,#4f1d9e);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:15px;flex-shrink:0;">🤖</div>
+        <div style="background:#fff;border-radius:4px 14px 14px 14px;
+                    padding:12px 18px;border:0.5px solid #ede9fe;">
+            <div style="display:flex;gap:6px;align-items:center;">
+                <span style="width:9px;height:9px;border-radius:50%;background:#7c3aed;
+                             display:inline-block;animation:dotSlide 1.4s infinite ease-in-out;
+                             animation-delay:0s;"></span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#c4b5fd;
+                             display:inline-block;animation:dotSlide 1.4s infinite ease-in-out;
+                             animation-delay:0.2s;"></span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#7c3aed;
+                             display:inline-block;animation:dotSlide 1.4s infinite ease-in-out;
+                             animation-delay:0.4s;"></span>
+            </div>
         </div>
     </div>
+    <style>
+    @keyframes dotSlide {
+        0%   { opacity:0.2; transform:translateX(0px) scale(0.8); }
+        30%  { opacity:1;   transform:translateX(4px) scale(1.2); }
+        60%  { opacity:0.5; transform:translateX(0px) scale(0.9); }
+        100% { opacity:0.2; transform:translateX(0px) scale(0.8); }
+    }
+    </style>
     """, unsafe_allow_html=True)
-    
-    # Run agent
-    response, workflow_complete = manager.run_agent_step(last_input)
-    
-    # Clear typing indicator
-    typing_placeholder.empty()
-    
+    response, _ = manager.run_agent_step(last_input)
+    typing.empty()
     if response:
         manager.add_message("assistant", response)
 
 
-def display_status_panel(manager: SessionManager) -> None:
-    state_dict = manager.get_state_summary()
-    render_state_info(state_dict)
-
-    if manager.workflow_complete:
-        # ✅ get_state_summary() already returns a dict — use .get()
-        success = state_dict.get("booking_success", False)
-        error = state_dict.get("error_message", "")
-        render_workflow_status(
-            complete=True,
-            success=success,
-            error=error
+def render_dob_picker(manager: SessionManager) -> bool:
+    messages = manager.get_conversation_history()
+    if not messages or messages[-1]['role'] != 'assistant':
+        return False
+    last_msg = messages[-1]['content'].lower()
+    state = manager.agent_state or {}
+    if 'date of birth' not in last_msg or state.get('collecting_step') != 'dob':
+        return False
+    st.markdown("""
+    <div style="background:linear-gradient(135deg,#667eea22,#764ba222);
+                border:2px dashed #3b9eff;border-radius:16px;
+                padding:16px 20px;margin:8px 0 12px 0;text-align:center;">
+        <div style="font-size:28px;margin-bottom:6px;">🗓️</div>
+        <div style="font-size:14px;font-weight:700;color:#1a5cdf;">Select Your Date of Birth</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">↓ Click below to open calendar ↓</div>
+    </div>
+    """, unsafe_allow_html=True)
+    _, col, _ = st.columns([1, 3, 1])
+    with col:
+        selected = st.date_input(
+            "📅 Date of Birth",
+            value=date(1990, 1, 1),
+            min_value=date(1920, 1, 1),
+            max_value=date(2010, 12, 31),
+            key="dob_picker",
+            format="YYYY/MM/DD"
         )
+        if st.button("✅ Confirm Date of Birth", use_container_width=True,
+                     key="dob_confirm", type="primary"):
+            dob_str = selected.strftime("%Y-%m-%d")
+            manager.add_message("user", dob_str)
+            with st.spinner("🔍 Looking up your information..."):
+                response, _ = manager.run_agent_step(dob_str)
+            if response:
+                manager.add_message("assistant", response)
+            return True
+    return False
 
-
-def handle_reset_conversation(manager: SessionManager) -> None:
-    """
-    Reset the conversation and start a new one
-    
-    Clears all conversation history and workflow state
-    Resets greeting flag so the initial greeting will show again
-    
-    Args:
-        manager: SessionManager to reset
-    """
-    manager.reset_conversation()
-    st.rerun()
 
 def render_quick_replies(manager: SessionManager) -> bool:
     messages = manager.get_conversation_history()
@@ -148,158 +140,201 @@ def render_quick_replies(manager: SessionManager) -> bool:
         return False
 
     last_msg = messages[-1]['content']
-    last_msg_lower = last_msg.lower()
+    last_lower = last_msg.lower()
     state = manager.agent_state or {}
 
-    # ── YES/NO questions ──
-    if any(x in last_msg_lower for x in ['yes/no', 'health insurance', 'confirm this appointment']):
-        col1, col2 = st.columns(2)
-        with col1:
+    # ── Yes/No buttons ────────────────────────────────────────────────────────
+    # Yes/No only for appointment confirmation — NOT for insurance question
+    is_confirmation = any(x in last_lower for x in [
+        'shall i confirm', 'confirm this appointment', 'yes/no'
+    ])
+    is_insurance_question = any(x in last_lower for x in [
+        'out of pocket', 'do you have insurance', 'health insurance'
+    ])
+
+    if is_confirmation and not is_insurance_question and not state.get('insurance_carrier'):
+        pass  # don't show yes/no yet
+    elif is_confirmation and not is_insurance_question:
+        c1, c2 = st.columns(2)
+        with c1:
             if st.button("✅ Yes", use_container_width=True, key="qr_yes"):
-                return _send_quick_reply(manager, "yes")
-        with col2:
+                return _quick_reply(manager, "yes")
+        with c2:
             if st.button("❌ No", use_container_width=True, key="qr_no"):
-                return _send_quick_reply(manager, "no")
+                return _quick_reply(manager, "no")
+        return False
 
-    # ── Cancellation reason ──
-    elif 'declining' in last_msg_lower:
-        cols = st.columns(3)
-        options = ["Personal reasons", "Found another doctor", "Schedule conflict"]
-        for i, opt in enumerate(options):
-            with cols[i]:
-                if st.button(opt, use_container_width=True, key=f"qr_reason_{i}"):
-                    return _send_quick_reply(manager, opt)
-        # Skip button
-        if st.button("⏭️ Skip (no reason)", use_container_width=True, key="qr_skip"):
-            return _send_quick_reply(manager, "skip")
-
-    # ── Doctor selection ──
-    elif 'available doctors' in last_msg_lower:
-        doctors = state.get("available_doctors", [])
-        for i, doc in enumerate(doctors, 1):
-            label = f"{i}. {doc['name']} - {doc.get('specialization','')} @ {doc.get('location','')}"
+    # ── Doctor selection ──────────────────────────────────────────────────────
+    if 'available doctors' in last_lower and not state.get('preferred_doctor'):
+        for i, doc in enumerate(state.get("available_doctors", []), 1):
+            label = (f"{i}. {doc['name']} — "
+                     f"{doc.get('specialization','')} @ {doc.get('location','')}")
             if st.button(label, use_container_width=True, key=f"qr_doc_{i}"):
-                return _send_quick_reply(manager, str(i))
+                return _quick_reply(manager, str(i))
+        return False
 
-    # ── Date selection ──
-    elif 'preferred date' in last_msg_lower or 'available dates' in last_msg_lower:
+    # ── Date selection ────────────────────────────────────────────────────────
+    if ('preferred date' in last_lower or 'available dates' in last_lower) \
+            and not state.get('appointment_date'):
         import re
         dates = re.findall(r'\d{4}-\d{2}-\d{2}', last_msg)
         if dates:
-            cols = st.columns(min(len(dates), 4))
-            for i, date in enumerate(dates[:4]):
-                from datetime import datetime
-                try:
-                    weekday = datetime.strptime(date, "%Y-%m-%d").strftime("%a")
-                    label = f"📅 {date}\n({weekday})"
-                except:
-                    label = f"📅 {date}"
-                with cols[i % 4]:
-                    if st.button(label, use_container_width=True, key=f"qr_date_{i}"):
-                        return _send_quick_reply(manager, date)
+            for row in range(0, len(dates), 3):
+                cols = st.columns(3)
+                for i, d in enumerate(dates[row:row+3]):
+                    try:
+                        from datetime import datetime
+                        wd = datetime.strptime(d, "%Y-%m-%d").strftime("%a")
+                        label = f"📅 {d} ({wd})"
+                    except Exception:
+                        label = f"📅 {d}"
+                    with cols[i]:
+                        if st.button(label, use_container_width=True,
+                                     key=f"qr_d_{row+i}"):
+                            return _quick_reply(manager, d)
+        return False
 
-    # ── Time slot selection ──
-    elif 'time slot' in last_msg_lower or 'available slots' in last_msg_lower:
+    # ── Time slot selection — ONLY if no slot selected yet ───────────────────
+    if not state.get('selected_time'):
         slots = state.get("available_slots", [])
-        if slots:
+        if slots and ('time slot' in last_lower or 'available slot' in last_lower
+                      or 'pick one' in last_lower or 'specific slot' in last_lower):
             cols = st.columns(min(len(slots), 4))
-            for i, slot in enumerate(slots, 1):
-                with cols[(i-1) % 4]:
-                    if st.button(f"🕐 {slot}", use_container_width=True, key=f"qr_slot_{i}"):
-                        return _send_quick_reply(manager, str(i))
+            for i, slot in enumerate(slots):
+                with cols[i % 4]:
+                    if st.button(f"🕐 {slot}", use_container_width=True,
+                                 key=f"qr_s_{i}"):
+                        return _quick_reply(manager, slot)
+            return False
+
+    # ── Insurance carrier selection ───────────────────────────────────────────
+    if 'insurance carrier' in last_lower and not state.get('insurance_carrier'):
+        carriers = state.get("available_carriers", [])
+        if carriers:
+            cols = st.columns(2)
+            for i, c in enumerate(carriers, 1):
+                with cols[(i-1) % 2]:
+                    if st.button(f"🏥 {c}", use_container_width=True,
+                                 key=f"qr_c_{i}"):
+                        return _quick_reply(manager, str(i))
+        return False
 
     return False
 
 
-def _send_quick_reply(manager: SessionManager, value: str) -> bool:
-    """Helper to send a quick reply value."""
+def _quick_reply(manager: SessionManager, value: str) -> bool:
     manager.add_message("user", value)
-    with st.spinner("MediBook is thinking..."):
-        response, wf = manager.run_agent_step(value)
+    typing = st.empty()
+    typing.markdown("""
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+        <div style="width:34px;height:34px;border-radius:50%;
+                    background:linear-gradient(135deg,#7c3aed,#4f1d9e);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:15px;">🤖</div>
+        <div style="background:#fff;border-radius:4px 14px 14px 14px;padding:12px 18px;
+                    border:0.5px solid #ede9fe;">
+            <div style="display:flex;gap:6px;">
+                <span style="width:9px;height:9px;border-radius:50%;background:#7c3aed;
+                             display:inline-block;animation:dotSlide 1.4s infinite;
+                             animation-delay:0s;"></span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#c4b5fd;
+                             display:inline-block;animation:dotSlide 1.4s infinite;
+                             animation-delay:0.2s;"></span>
+                <span style="width:9px;height:9px;border-radius:50%;background:#7c3aed;
+                             display:inline-block;animation:dotSlide 1.4s infinite;
+                             animation-delay:0.4s;"></span>
+            </div>
+        </div>
+    </div>
+    <style>
+    @keyframes dotSlide {
+        0%,100%{opacity:0.2;transform:scale(0.8);}
+        30%{opacity:1;transform:scale(1.2);}
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    response, _ = manager.run_agent_step(value)
+    typing.empty()
     if response:
         manager.add_message("assistant", response)
     return True
 
-def render_dob_picker(manager: SessionManager) -> bool:
-    """Show date picker for DOB input."""
-    messages = manager.get_conversation_history()
-    if not messages or messages[-1]['role'] != 'assistant':
-        return False
-    
-    last_msg = messages[-1]['content'].lower()
-    state = manager.agent_state or {}
-    
-    # Show date picker when asking for DOB
-    if 'date of birth' in last_msg and state.get('collecting_step') == 'dob':
-        from datetime import date
-        selected_date = st.date_input(
-            "📅 Select your date of birth:",
-            value=date(1990, 1, 1),
-            min_value=date(1920, 1, 1),
-            max_value=date(2010, 12, 31),
-            key="dob_picker"
-        )
-        if st.button("✅ Confirm Date of Birth", use_container_width=True, key="dob_confirm"):
-            dob_str = selected_date.strftime("%Y-%m-%d")
-            manager.add_message("user", dob_str)
-            with st.spinner("MediBook is thinking..."):
-                response, wf = manager.run_agent_step(dob_str)
-            if response:
-                manager.add_message("assistant", response)
-            return True
-    
-    return False
 
+def render_text_input(manager: SessionManager) -> bool:
+    user_input = render_input_form()
+    if user_input is None:
+        return False
+    manager.add_message("user", user_input)
+    return True
 
 
 def main():
     render_page_header()
     manager = initialize_session_state()
 
-    # ✅ FIX 1: render_sidebar_info BEFORE columns — it uses st.sidebar internally
-    # If called inside a column block, Streamlit renders it twice
-    render_sidebar_info(manager.get_state_summary())
+    # ── Left sidebar — past appointments + new chat ──
+    render_sidebar_info(manager.get_state_summary(), manager)
 
-    # ✅ FIX 2: top bar with patient name
-    state_dict = manager.get_state_summary()
-    render_top_bar(patient_name=state_dict.get('patient_name', ''))
+    # ── Three column layout ──
+    # Left gap | Center chat | Right panel
+    _, center, right = st.columns([0.05, 0.65, 0.30])
 
-    chat_col, status_col = st.columns([3, 1])
+    with right:
+        render_right_panel(manager.get_state_summary(), manager)
 
-    with chat_col:
+    with center:
+        # Top bar
+        state_dict = manager.get_state_summary()
+        patient_name = state_dict.get('patient_name', '')
+        subtitle = f"Hi {patient_name} 👋" if patient_name else "AI-Powered Appointment Scheduling"
+        st.markdown(f"""
+        <div style="background:#fff;border-radius:14px;padding:12px 20px;
+                    margin-bottom:16px;display:flex;align-items:center;
+                    justify-content:space-between;border:0.5px solid #ede9fe;
+                    box-shadow:0 1px 4px rgba(124,58,237,0.08);">
+            <div>
+                <div style="font-size:16px;font-weight:600;color:#1a1a2e;
+                            font-family:'Geist Sans',sans-serif;">🏥 MediBook</div>
+                <div style="font-size:12px;color:#64748b;
+                            font-family:'Geist Sans',sans-serif;">{subtitle}</div>
+            </div>
+            <span style="font-size:11px;padding:4px 12px;background:#f0fdf4;
+                         color:#059669;border-radius:20px;border:1px solid #a7f3d0;">
+                ● Online
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Chat messages
         with st.container():
-            display_chat_interface(manager)
-
-            # DOB calendar picker
-            if render_dob_picker(manager):
-                st.rerun()
-        
-            # Quick reply buttons
-            if render_quick_replies(manager):
-                st.rerun()
-                
-            # Show typing indicator and process inside chat area
-            if manager.get_conversation_history() and \
-               manager.get_conversation_history()[-1]['role'] == 'user' and \
-               not manager.workflow_complete:
+            render_chat_section(manager)
+            if (manager.get_conversation_history() and
+                    manager.get_conversation_history()[-1]['role'] == 'user' and
+                    not manager.workflow_complete):
                 process_pending_input(manager)
                 st.rerun()
+
         st.divider()
+
         if not manager.workflow_complete:
+            if render_dob_picker(manager):
+                st.rerun()
+            if render_quick_replies(manager):
+                st.rerun()
             st.subheader("💬 Your Response")
-            if handle_user_input(manager):
+            if render_text_input(manager):
                 st.rerun()
         else:
-            st.success("✅ Workflow Complete!")
-            st.info("Start a new conversation with the button below")
-
-    with status_col:
-        display_status_panel(manager)
-        st.divider()
-        st.subheader("⚙️ Controls")
-        if st.button("🔄 New Conversation", use_container_width=True):
-            handle_reset_conversation(manager)
-        # ❌ DELETE any render_sidebar_info() call that was inside this block
+            # Check if cancelled or completed
+            state_dict = manager.get_state_summary()
+            if state_dict.get('booking_confirmed'):
+                st.success("✅ Appointment Booking Complete!")
+            else:
+                st.warning("❌ Appointment was cancelled. Your info has been saved.")
+            
+            if st.button("🔄 Book Another Appointment", use_container_width=True):
+                manager.reset_conversation()
+                st.rerun()
 
 
 if __name__ == "__main__":

@@ -20,14 +20,10 @@ from datetime import datetime
 
 # Safe import with graceful fallback
 try:
-    import google.generativeai as genai
-    from google.generativeai.generative_models import GenerativeModel
-    from google.generativeai.client import configure
+    from google import genai
     GENAI_AVAILABLE = True
 except ImportError:
     genai = None
-    GenerativeModel = None
-    configure = None
     GENAI_AVAILABLE = False
 
 
@@ -60,210 +56,69 @@ Fields to extract (use null if not found):
 
 User input: "{user_input}"
 
+IMPORTANT RULES:
+- Extract ONLY the actual value, NOT the full sentence
+- For name: return "John Smith" NOT "my name is John Smith"  
+- For date_of_birth: return "1990-03-15" NOT "born in March 1990"
+- If a field is not mentioned, return null
+
 Return valid JSON response:
 """
-    
     def __init__(self, api_key: Optional[str] = None):
-        """
-        Initialize Gemini Parser with safe import and configuration handling
-        
-        Args:
-            api_key: Google Gemini API key. If None, uses GEMINI_API_KEY env var
-                    If not found, parser will be disabled with graceful fallback
-        """
         from utils.config import Config
-        
-        # Get API key from parameter, environment, or config
         self.api_key = api_key or os.getenv('GEMINI_API_KEY') or Config.GEMINI_API_KEY
         self.model_name = Config.LLM_MODEL
-        self.temperature = Config.LLM_TEMPERATURE
-        self.max_tokens = Config.LLM_MAX_TOKENS
-        self.timeout = Config.LLM_TIMEOUT
         self.enabled = False
-        self.model = None
+        self.client = None
         self.init_error = None
-        
-        # Check if google-generativeai package is available
+
         if not GENAI_AVAILABLE:
-            error_msg = (
-                "google.generativeai package not installed. "
-                "Install with: pip install google-generativeai>=0.7.0"
-            )
-            logger.warning(error_msg)
-            self.init_error = error_msg
-            self.enabled = False
+            self.init_error = "google-genai not installed"
             return
-        
-        if not genai:
-            error_msg = "google.generativeai import failed unexpectedly"
-            logger.error(error_msg)
-            self.init_error = error_msg
-            self.enabled = False
-            return
-        
-        # Check if required functions/classes are available
-        if not GenerativeModel or not configure:
-            error_msg = "GenerativeModel or configure not available from google.generativeai"
-            logger.error(error_msg)
-            self.init_error = error_msg
-            self.enabled = False
-            return
-        
-        # Check if API key is configured
+
         if not self.api_key or not self.api_key.strip():
-            warning_msg = (
-                "GEMINI_API_KEY not set. LLM parsing will be disabled. "
-                "Set GEMINI_API_KEY environment variable or Config.GEMINI_API_KEY to enable. "
-                "Fallback to rule-based parsing will be used."
-            )
-            logger.debug(warning_msg)
-            self.init_error = warning_msg
-            self.enabled = False
+            self.init_error = "GEMINI_API_KEY not set"
             return
-        
-        # Try to initialize Gemini model
+
         try:
-            # Configure API key with genai.configure()
-            configure(api_key=self.api_key.strip())
-            logger.debug(f"Gemini API configured, initializing {self.model_name}")
-            
-            # Create GenerativeModel instance with configuration
-            try:
-                self.model = GenerativeModel(
-                    model_name=self.model_name,
-                    generation_config={
-                        'temperature': self.temperature,
-                        'max_output_tokens': self.max_tokens,
-                    }
-                )
-                self.enabled = True
-                logger.info(f"Gemini Parser initialized successfully with model: {self.model_name}")
-            except TypeError as e:
-                error_msg = f"Failed to create Gemini model (SDK compatibility issue): {str(e)}"
-                logger.error(error_msg)
-                self.init_error = error_msg
-                self.enabled = False
-                self.model = None
-            except Exception as e:
-                error_msg = f"Failed to create Gemini model: {str(e)}"
-                logger.error(error_msg)
-                self.init_error = error_msg
-                self.enabled = False
-                self.model = None
-        
-        except AttributeError as e:
-            error_msg = f"Failed to configure Gemini API (SDK issue): {str(e)}. Using fallback parsing."
-            logger.warning(error_msg)
-            self.init_error = error_msg
-            self.enabled = False
-            self.model = None
+            self.client = genai.Client(api_key=self.api_key.strip())
+            self.enabled = True
+            logger.info(f"Gemini Parser initialized with model: {self.model_name}")
         except Exception as e:
-            error_msg = f"Failed to configure Gemini API: {str(e)}"
-            logger.error(error_msg)
-            self.init_error = error_msg
+            self.init_error = str(e)
             self.enabled = False
-            self.model = None
-    
+
     def parse_user_input(self, user_input: str) -> Tuple[bool, Dict[str, Any]]:
-        """
-        Parse user input using Gemini LLM with comprehensive error handling
-        
-        Args:
-            user_input: User's conversational input
-        
-        Returns:
-            Tuple of (success: bool, parsed_fields: dict)
-            - success: True if parsing succeeded, False if failed or parser disabled
-            - parsed_fields: Extracted and validated fields, empty dict if parsing failed
-            
-        Example:
-            success, fields = parser.parse_user_input("My name is John Smith, born in 1990")
-            if success:
-                name = fields.get('name')
-                dob = fields.get('date_of_birth')
-        """
-        # Check if parser is enabled
-        if not self.enabled:
-            if self.init_error:
-                logger.debug(f"Gemini parser disabled during init: {self.init_error}")
-            else:
-                logger.debug("Gemini parser not enabled, returning empty result")
+        if not self.enabled or not self.client:
             return False, {}
-        
-        # Check if model is properly initialized
-        if not self.model:
-            error_msg = "Gemini model not available despite parser being marked as enabled"
-            logger.error(error_msg)
-            self.enabled = False
-            return False, {}
-        
-        # Validate input
+
         if not user_input or not user_input.strip():
-            logger.debug("Empty user input provided")
             return False, {}
-        
-        user_input = user_input.strip()
-        
+
         try:
-            # Build extraction prompt
-            prompt = self.EXTRACTION_TEMPLATE.format(user_input=user_input)
-            
-            logger.debug(f"Calling Gemini API for user input extraction")
-            
-            # Call Gemini API with error handling
-            try:
-                response = self.model.generate_content(prompt)
-            except TypeError as e:
-                logger.error(f"Gemini API type error (likely API configuration issue): {str(e)}")
+            prompt = self.EXTRACTION_TEMPLATE.format(user_input=user_input.strip())
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+
+            if not response or not response.text:
                 return False, {}
-            except Exception as e:
-                logger.error(f"Gemini API call failed: {str(e).__class__.__name__}: {str(e)}")
-                return False, {}
-            
-            # Validate response
-            if not response:
-                logger.warning("Gemini returned None response object")
-                return False, {}
-            
-            if not hasattr(response, 'text') or not response.text:
-                logger.warning("Gemini response missing text attribute or text is empty")
-                return False, {}
-            
-            # Parse JSON response
+
             response_text = response.text.strip()
-            
-            # Remove markdown code blocks if present
             if response_text.startswith('```'):
                 response_text = response_text.split('```')[1]
             if response_text.startswith('json'):
                 response_text = response_text[4:]
-            
             response_text = response_text.strip()
-            
-            if not response_text:
-                logger.warning("Gemini response was empty after removing markdown")
-                return False, {}
-            
-            # Parse JSON
-            try:
-                parsed_fields = json.loads(response_text)
-            except json.JSONDecodeError as e:
-                logger.warning(f"Invalid JSON from Gemini (line {e.lineno}, col {e.colno}): {e.msg}")
-                logger.debug(f"Response text was: {response_text[:200]}...")
-                return False, {}
-            
-            # Validate and clean parsed fields
+
+            parsed_fields = json.loads(response_text)
             cleaned_fields = self._validate_fields(parsed_fields)
-            
-            extracted_count = len([v for v in cleaned_fields.values() if v is not None])
-            logger.info(f"Successfully parsed user input. Extracted {extracted_count} fields: {list(cleaned_fields.keys())}")
-            
             return True, cleaned_fields
-        
+
         except Exception as e:
-            logger.error(f"Unexpected error in parse_user_input: {str(e).__class__.__name__}: {str(e)}")
-            logger.exception("Full traceback:")
-            return False, {}
+            logger.error(f"Gemini API call failed: {e}")
+            return False, {}    
     
     def _validate_fields(self, fields: Dict[str, Any]) -> Dict[str, Any]:
         """

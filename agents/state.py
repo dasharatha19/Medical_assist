@@ -93,3 +93,10 @@ class SchedulerState(TypedDict, total=False):
 
     # Email Validation
     patient_email_validated: bool
+
+    # ── Intelligent Agent Fields ──
+    conversation_phase: str      # "greeting"|"collecting"|"scheduling"|"insurance"|"confirming"|"done"
+    intent: str                  # last detected intent from Gemini
+    missing_fields: list         # list of fields still needed
+    conversation_context: list   # full conversation for Gemini context
+    db_saved: bool               # whether appointment saved to DB

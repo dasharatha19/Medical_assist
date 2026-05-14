@@ -1,69 +1,38 @@
 """
-Session Manager — Manual routing version.
-Calls the correct node directly based on state, no interrupt_after needed.
+Session Manager — Intelligent 4-node version.
 """
+from asyncio.log import logger
 import uuid
-from agents import create_scheduling_graph
-from typing import List, Dict, Tuple, Optional
-from agents.state import SchedulerState
-from agents.nodes.greeting_node import greeting_node
-from agents.nodes.patient_lookup_node import patient_lookup_node
-from agents.nodes.scheduling_node import scheduling_node
-from agents.nodes.insurance_node import insurance_node
-from agents.nodes.confirmation_node import confirmation_node
-from agents.nodes.reminder_node import reminder_node
-from agents.nodes.form_distribution_node import form_distribution_node
-from agents.nodes.scheduling_node import scheduling_node
-from agents.nodes.insurance_node import insurance_node
-from agents.nodes.confirmation_node import confirmation_node
-from agents.nodes.reminder_node import reminder_node
 import traceback
+from typing import List, Dict, Tuple, Optional
+from agents.nodes.conversation_node import conversation_node
+from agents.nodes.booking_node import booking_node
+from agents.nodes.reminder_node import reminder_node
 from agents.nodes.form_distribution_node import form_distribution_node
+from database.db import initialize_database, save_appointment
+
+
 class SessionManager:
 
     def __init__(self):
+        initialize_database()
         self.conversation_history: List[Dict[str, str]] = []
         self.agent_state = None
         self.workflow_complete: bool = False
         self.greeting_shown: bool = False
         self.thread_id = str(uuid.uuid4())
-        self.config = {"configurable": {"thread_id": self.thread_id}}  # ✅ ADD THIS
-        self.agent_graph = create_scheduling_graph()  
-        
 
-        # ── Routing logic ──────────────────────────────────────────────────────────
     def _get_current_node(self):
-        """Decide which node to call based on state."""
         if not self.agent_state:
-            return patient_lookup_node
-
-        current_step = self.agent_state.get("current_step", "")
-        collecting_step = self.agent_state.get("collecting_step", "")
-
-        # Stay in patient_lookup until all fields collected
-        if collecting_step and collecting_step != "done":
-            return patient_lookup_node
-
-        if not self.agent_state.get("patient_name"):
-            return patient_lookup_node
-
-        if current_step == "scheduling":
-            return scheduling_node
-
-        if current_step == "insurance":
-            return insurance_node
-
-        if current_step == "confirmation":
-            return confirmation_node
-
-        if current_step == "reminders":
+            return conversation_node
+        if self.agent_state.get("booking_confirmed") and \
+           not self.agent_state.get("booking_success"):
+            return booking_node
+        if self.agent_state.get("current_step") == "reminders":
             return reminder_node
-
-        if current_step == "form_distribution":
+        if self.agent_state.get("current_step") == "form_distribution":
             return form_distribution_node
-
-        return patient_lookup_node
-    # ── Public API ─────────────────────────────────────────────────────────────
+        return conversation_node
 
     def add_message(self, role: str, content: str) -> None:
         if content.strip():
@@ -78,9 +47,13 @@ class SessionManager:
     def show_greeting_if_needed(self) -> None:
         if not self.greeting_shown and not self.conversation_history:
             self.add_message("assistant", (
-                "Hi! 👋 I'm **MediBook**, your AI appointment assistant.\n\n"
-                "I'll guide you step by step through scheduling your appointment.\n\n"
-                "👋 To get started, please enter your **full name**."
+                "Hi! 👋 I'm **MediBook**, your AI appointment scheduling assistant.\n\n"
+                "I can help you book an appointment, answer questions about our doctors, "
+                "or check availability.\n\n"
+                "📌 **Please note:** Any information you share during this conversation "
+                "is saved securely, even if you cancel mid-booking. "
+                "This helps us serve you better next time.\n\n"
+                "How can I help you today?"
             ))
             self.greeting_shown = True
 
@@ -88,6 +61,20 @@ class SessionManager:
         if not self.agent_state:
             return {"current_step": "greeting"}
         s = self.agent_state
+        current_step = s.get("current_step", "")
+        if not current_step:
+            if not s.get("patient_name"):
+                current_step = "greeting"
+            elif not s.get("preferred_doctor"):
+                current_step = "patient_lookup"
+            elif not s.get("selected_time"):
+                current_step = "scheduling"
+            elif not s.get("insurance_carrier"):
+                current_step = "insurance"
+            elif not s.get("booking_confirmed"):
+                current_step = "confirmation"
+            else:
+                current_step = "reminders"
         return {
             "patient_name":         s.get("patient_name", ""),
             "patient_id":           s.get("patient_id", ""),
@@ -100,7 +87,7 @@ class SessionManager:
             "insurance_carrier":    s.get("insurance_carrier", ""),
             "booking_confirmed":    s.get("booking_confirmed", False),
             "booking_success":      s.get("booking_success", False),
-            "current_step":         s.get("current_step", ""),
+            "current_step":         current_step,
             "workflow_complete":    s.get("workflow_complete", False),
             "error_message":        s.get("error_message", ""),
         }
@@ -112,16 +99,12 @@ class SessionManager:
         self.greeting_shown = False
         self.thread_id = str(uuid.uuid4())
 
-    # ── Core execution ─────────────────────────────────────────────────────────
-
     def run_agent_step(self, user_input: str) -> Tuple[str, bool]:
         if self.agent_state is None:
             self.agent_state = {}
 
-        # Don't process empty input from user
         if not user_input.strip() and self.agent_state:
-            response = self.agent_state.get("response", "")
-            return response, self.workflow_complete
+            return self.agent_state.get("response", ""), self.workflow_complete
 
         self.agent_state["user_input"] = user_input
 
@@ -130,71 +113,33 @@ class SessionManager:
             result = node_fn(self.agent_state)
             self.agent_state.update(result)
 
-            # Auto-trigger lookup without waiting for user input
-            if self.agent_state.get("collecting_step") == "lookup":
-                self.agent_state["user_input"] = ""
-                result2 = patient_lookup_node(self.agent_state)
+            # Auto-trigger booking node
+            if self.agent_state.get("booking_confirmed") and \
+               not self.agent_state.get("booking_success"):
+                result2 = booking_node(self.agent_state)
                 self.agent_state.update(result2)
 
-            # Auto-trigger show_doctors without waiting for user input
-            if self.agent_state.get("current_step") == "scheduling" and \
-            not self.agent_state.get("scheduling_step"):
-                self.agent_state["user_input"] = ""
-                result3 = scheduling_node(self.agent_state)
-                self.agent_state.update(result3)
-            
-            # Auto-trigger insurance first question (only on fresh entry)
-            if self.agent_state.get("current_step") == "insurance" and \
-               not self.agent_state.get("insurance_step"):
-                self.agent_state["user_input"] = ""
-                result4 = insurance_node(self.agent_state)
-                self.agent_state.update(result4)
-            
-            # Auto-trigger confirmation summary (only on fresh entry)
-            if self.agent_state.get("current_step") == "confirmation" and \
-               not self.agent_state.get("confirmation_step"):
-                self.agent_state["user_input"] = ""
-                result5 = confirmation_node(self.agent_state)
-                self.agent_state.update(result5)
-            
-            # Auto-trigger reminders after confirmation
+            # Auto-trigger reminders
             if self.agent_state.get("current_step") == "reminders" and \
-               self.agent_state.get("booking_confirmed") and \
-               not self.agent_state.get("booking_success"):
+               self.agent_state.get("booking_success") and \
+               not self.agent_state.get("reminders_setup"):
                 self.agent_state["user_input"] = ""
-                result6 = reminder_node(self.agent_state)
-                self.agent_state.update(result6)
-            
+                result3 = reminder_node(self.agent_state)
+                self.agent_state.update(result3)
+
             # Auto-trigger form distribution
             if self.agent_state.get("current_step") == "form_distribution" and \
                not self.agent_state.get("form_distribution_status"):
                 self.agent_state["user_input"] = ""
-                result7 = form_distribution_node(self.agent_state)
-                self.agent_state.update(result7)
+                result4 = form_distribution_node(self.agent_state)
+                self.agent_state.update(result4)
 
             self.workflow_complete = self.agent_state.get("workflow_complete", False)
             response = self.agent_state.get("response", "").strip()
 
             if not response:
-                step = self.agent_state.get("collecting_step", "")
-                insurance_step = self.agent_state.get("insurance_step", "")
-                fallbacks = {
-                    "phone": "📞 Please enter your **phone number**:",
-                    "email": "📧 Please enter your **email address**:",
-                    "dob":   "📅 What is your **date of birth**? (YYYY-MM-DD)",
-                    "name":  "👤 Please enter your **full name**:",
-                }
-                insurance_fallbacks = {
-                    "collect_member_id": "💳 Please enter your **Member ID**:",
-                    "collect_group_id":  "🔢 Please enter your **Group ID**:",
-                    "collect_other_carrier": "✏️ Please type your **insurance carrier name**:",
-                }
-                if step in fallbacks:
-                    response = fallbacks[step]
-                elif insurance_step in insurance_fallbacks:
-                    response = insurance_fallbacks[insurance_step]
-                else:
-                    response = ""
+                response = "I'm here to help! How can I assist you?"
+
         except Exception as e:
             error_msg = f"❌ Error: {e}\n```\n{traceback.format_exc()}\n```"
             return error_msg, False

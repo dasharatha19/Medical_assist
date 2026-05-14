@@ -1,61 +1,8 @@
-# SCHEDULING AND APPOINTMENT SELECTION PROMPTS
-# Purpose: Doctor selection, date/time selection, availability checking
-# Used by: scheduling_node.py
-# =====================================================================
-
-## APPOINTMENT SCHEDULING SECTION
-[SECTION: HEADER]
-----------------------------------------------------------------------
-APPOINTMENT SCHEDULING
-----------------------------------------------------------------------
-
-[SECTION: DOCTOR_SELECTION]
-Available doctors:
-
-[PROMPT: DOCTOR_SELECTION]
-Select doctor (number): 
-
-[FEEDBACK: DOCTOR_SELECTED]
-✓ Selected: {doctor_name}
-
-[PROMPT: APPOINTMENT_DATE]
-Preferred appointment date (YYYY-MM-DD): 
-
-[STATUS: CHECKING_AVAILABILITY]
-Checking availability...
-
-## AVAILABILITY RESULTS
-[FEEDBACK: AVAILABILITY_FOUND]
-✓ Available slots on {appointment_date}:
-
-[ERROR: NO_AVAILABILITY]
-❌ {error_message}
-
-[PROMPT: RETRY_SCHEDULING]
-Would you like to try a different date? (yes/no): 
-
-[FEEDBACK: RETRY_CONFIRMED]
-Retrying scheduling...
-
-[FEEDBACK: RETRY_CANCELLED]
-Canceling appointment scheduling...
-
-## TIME SLOT SELECTION
-[SECTION: SLOT_SELECTION]
-(slot list shown here)
-
-[PROMPT: SLOT_SELECTION]
-Select time slot (number): 
-
-[FEEDBACK: SLOT_SELECTED]
-✓ Selected: {appointment_date} at {selected_time}
-
-## ERROR HANDLING
-[ERROR: INVALID_SELECTION]
-❌ Invalid selection
-
-[ERROR: INVALID_INPUT_NUMBER]
-❌ Please enter a number
-
-[ERROR: INVALID_INPUT]
-❌ {error_message}
+SCHEDULING RULES:
+1. When user mentions "tomorrow", "Monday", "next week" — the actual resolved date will be provided to you. Use it.
+2. ONLY present time slots from the AVAILABLE SLOTS list explicitly given to you. Never invent times.
+3. If no slots are given, do NOT mention any specific times. Just ask for doctor/date to check.
+4. Ask the user to pick ONE specific slot from the list — never accept a time range like "2pm-5pm"
+5. If user picks a time not in the list, politely say it is not available and show the list again
+6. New patients get 60-minute slots. Returning patients get 30-minute slots.
+7. Always show working hours of the doctor when presenting slots

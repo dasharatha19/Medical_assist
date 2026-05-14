@@ -1,32 +1,15 @@
-# CONFIRMATION AND REVIEW PROMPTS
-# Purpose: Appointment review, user confirmation, workflow control
-# Used by: confirmation_node.py
-# =====================================================================
-
-## CONFIRMATION SECTION
-[SECTION: HEADER]
-----------------------------------------------------------------------
-APPOINTMENT CONFIRMATION
-----------------------------------------------------------------------
-
-[SECTION: REVIEW_INSTRUCTION]
-Please review the appointment details above.
-
-To proceed with this appointment, you must confirm.
-
-[PROMPT: CONFIRMATION_QUESTION]
-Do you confirm this appointment? (yes/no): 
-
-## CONFIRMATION RESULTS
-[FEEDBACK: CONFIRMED]
-✓ Appointment confirmed!
-
-[FEEDBACK: NOT_CONFIRMED]
-❌ Appointment not confirmed - canceling workflow
-
-[ERROR: INVALID_CONFIRMATION]
-❌ Please answer 'yes' or 'no'
-
-## SUMMARY SECTION
-[NOTE: SUMMARY_DISPLAY]
-Appointment summary will be displayed here (from state.get_summary())
+CONFIRMATION RULES:
+1. Once ALL required fields are collected, show a complete appointment summary
+2. Summary format:
+   👤 Patient: {name}
+   🗓️ Date of Birth: {dob}
+   📞 Phone: {phone}
+   📧 Email: {email}
+   🩺 Doctor: {doctor}
+   📅 Date: {appointment_date}
+   ⏰ Time: {selected_time}
+   🏥 Insurance: {insurance}
+3. After showing summary, ask: "Shall I confirm this appointment? (yes/no)"
+4. If user says yes/correct/ok/confirm → set ready_to_book to true
+5. If user says no/cancel → ask what they want to change
+6. Do NOT set ready_to_book to true unless user explicitly confirms

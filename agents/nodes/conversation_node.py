@@ -1,0 +1,458 @@
+"""
+Conversation Node — Intelligent AI chatbot node.
+Loads static rules from prompts/ folder.
+Dynamic context injected at runtime.
+"""
+import json
+import logging
+from datetime import datetime, timedelta
+from pathlib import Path
+from tools import tools
+from utils.llm_client import get_llm_client
+from utils.validators import (
+    PatientDataValidator, ContactValidator,
+    SchedulingValidator
+)
+
+logger = logging.getLogger(__name__)
+
+PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
+
+
+def _load_prompt(filename: str) -> str:
+    try:
+        return (PROMPTS_DIR / filename).read_text(encoding="utf-8").strip()
+    except Exception as e:
+        logger.warning(f"Could not load prompt {filename}: {e}")
+        return ""
+
+
+def _next_weekdays(n=3) -> list:
+    result, d = [], datetime.now().date() + timedelta(days=1)
+    while len(result) < n:
+        if d.weekday() < 5:
+            result.append(str(d))
+        d += timedelta(days=1)
+    return result
+
+
+def _resolve_relative_date(text: str) -> str:
+    today = datetime.now().date()
+    t = text.lower().strip()
+    if "tomorrow" in t:
+        return str(today + timedelta(days=1))
+    if "today" in t:
+        return str(today)
+    days = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]
+    for i, day in enumerate(days):
+        if day in t:
+            delta = (i - today.weekday()) % 7
+            if delta == 0:
+                delta = 7
+            return str(today + timedelta(days=delta))
+    return ""
+
+
+def _build_system_prompt(state: dict, doctors_info: str, slots_block: str) -> str:
+    """Assemble full system prompt from files + runtime context."""
+
+    # Load static sections from files
+    system_base    = _load_prompt("system_prompt.txt")
+    scheduling     = _load_prompt("scheduling_prompt.txt")
+    confirmation   = _load_prompt("confirmation_prompt.txt")
+
+    today          = datetime.now().date()
+    today_str      = str(today)
+    today_weekday  = today.strftime("%A")
+    suggested      = ", ".join(_next_weekdays(3))
+
+    # Build collected vs missing
+    required = {
+        "patient_name":     "full name",
+        "patient_dob":      "date of birth",
+        "patient_phone":    "phone number",
+        "patient_email":    "email address",
+        "preferred_doctor": "preferred doctor",
+        "appointment_date": "appointment date",
+        "selected_time":    "appointment time slot",
+    }
+
+    collected_lines = []
+    missing_lines   = []
+    for field, label in required.items():
+        val = state.get(field)
+        if val:
+            collected_lines.append(f"  ✅ {label}: {val}")
+        else:
+            missing_lines.append(f"  ❓ {label}")
+
+    carrier = state.get("insurance_carrier", "")
+    if not carrier:
+        missing_lines.append("  ❓ insurance (say 'no insurance' to skip)")
+    elif carrier.lower() not in ["none", "no insurance", "self pay", "out of pocket"]:
+        if not state.get("insurance_member_id"):
+            missing_lines.append("  ❓ insurance member ID")
+        else:
+            collected_lines.append(f"  ✅ insurance member ID: {state['insurance_member_id']}")
+        if not state.get("insurance_group_id"):
+            missing_lines.append("  ❓ insurance group ID")
+        else:
+            collected_lines.append(f"  ✅ insurance group ID: {state['insurance_group_id']}")
+
+    collected_block = "\n".join(collected_lines) if collected_lines else "  (none yet)"
+    missing_block   = "\n".join(missing_lines)   if missing_lines   else "  ✅ All collected!"
+
+    # Patient status
+    patient_block = ""
+    if state.get("patient_id") and state.get("patient_type"):
+        ptype    = state["patient_type"]
+        duration = state.get("appointment_duration", 60)
+        if ptype == "new":
+            patient_block = (
+                f"PATIENT STATUS: NEW patient — slot duration {duration} min. "
+                f"Inform the user they are a new patient."
+            )
+        else:
+            patient_block = (
+                f"PATIENT STATUS: RETURNING patient — slot duration {duration} min. "
+                f"Welcome them back."
+            )
+
+    return f"""
+{system_base}
+
+---
+TODAY: {today_str} ({today_weekday})
+SUGGESTED DATES IF USER IS VAGUE: {suggested}
+
+ALREADY COLLECTED — NEVER ASK FOR THESE AGAIN:
+{collected_block}
+
+STILL NEEDED — ask one at a time:
+{missing_block}
+
+AVAILABLE DOCTORS:
+{doctors_info}
+
+{patient_block}
+
+{slots_block}
+
+---
+{scheduling}
+
+---
+{confirmation}
+
+---
+Respond ONLY with valid JSON:
+{{
+    "intent": "general_question|book_appointment|provide_info|confirm|cancel",
+    "extracted": {{
+        "patient_name": null,
+        "patient_dob": null,
+        "patient_phone": null,
+        "patient_email": null,
+        "preferred_doctor": null,
+        "appointment_date": null,
+        "selected_time": null,
+        "insurance_carrier": null,
+        "insurance_member_id": null,
+        "insurance_group_id": null,
+        "has_insurance": null
+    }},
+    "response": "Your warm natural reply to the patient",
+    "phase": "greeting|collecting|scheduling|insurance|confirming|done",
+    "ready_to_book": false
+}}
+
+CRITICAL:
+- In "extracted", only put fields the user just provided RIGHT NOW. Everything else null.
+- NEVER mention a time slot unless it appears in the AVAILABLE SLOTS section above.
+- NEVER re-ask for fields in ALREADY COLLECTED.
+""".strip()
+
+
+def conversation_node(state: dict) -> dict:
+    user_input = (state.get("user_input") or "").strip()
+    llm        = get_llm_client()
+    suggested  = ", ".join(_next_weekdays(3))
+
+    # ── 1. Pre-resolve relative dates ────────────────────────────────────────
+    if user_input and not state.get("appointment_date"):
+        resolved = _resolve_relative_date(user_input)
+        if resolved:
+            valid, _ = SchedulingValidator.validate_appointment_date(resolved)
+            if valid:
+                state["appointment_date"] = resolved
+                logger.info(f"Pre-resolved date: '{user_input}' → {resolved}")
+
+    # ── 2. Load doctors ───────────────────────────────────────────────────────
+    try:
+        doctors = tools.schedule_checker.get_doctors()
+        doctors_info = "\n".join([
+            f"- {d['name']} ({d.get('specialization','General')}) "
+            f"at {d.get('location','Main Clinic')} | "
+            f"Hours: {d.get('hours','9:00-17:00')}"
+            for d in doctors
+        ]) or "No doctors available."
+        state["available_doctors"] = doctors
+    except Exception as e:
+        logger.warning(f"Could not load doctors: {e}")
+        doctors_info = "Doctor information temporarily unavailable."
+
+    # ── 3. Build slots block (only from real availability check) ──────────────
+    slots_block = ""
+    if state.get("available_slots"):
+        slots     = state["available_slots"]
+        slot_list = "\n".join([f"  {i}. {s}" for i, s in enumerate(slots, 1)])
+        slots_block = (
+            f"AVAILABLE SLOTS for {state.get('preferred_doctor','')} "
+            f"on {state.get('appointment_date','')}:\n{slot_list}\n"
+            f"Patient MUST pick one from this list."
+        )
+    elif state.get("preferred_doctor") and state.get("appointment_date") and not state.get("selected_time"):
+        slots_block = (
+            "AVAILABLE SLOTS: Not yet checked. "
+            "Do NOT mention any specific times. "
+            "Tell the user you will check availability."
+        )
+
+    # ── 4. Build system prompt ────────────────────────────────────────────────
+    system = _build_system_prompt(state, doctors_info, slots_block)
+
+    # ── 5. Build conversation history ─────────────────────────────────────────
+    history = state.get("conversation_context", [])
+    history.append({"role": "user", "content": user_input})
+    history_str = ""
+    for msg in history[-10:]:
+        role = "Patient" if msg["role"] == "user" else "MediBook"
+        history_str += f"{role}: {msg['content']}\n"
+
+    prompt = (
+        f"Conversation so far:\n{history_str}\n"
+        f"Patient's latest message: {user_input}\n\n"
+        f"Respond as MediBook (JSON only):"
+    )
+
+    # ── 6. Call LLM ───────────────────────────────────────────────────────────
+    llm_result = None
+    if llm.is_enabled():
+        llm_result = llm.chat_json(prompt=prompt, system=system)
+
+    if not llm_result:
+        llm_result = _rule_based_fallback(state, user_input)
+
+    # ── 7. Extract fields ─────────────────────────────────────────────────────
+    extracted = llm_result.get("extracted", {})
+    _update_state_from_extracted(state, extracted)
+    
+    # ── 7b. Handle cancellation intent ───────────────────────────────────────────
+    if llm_result.get("intent") == "cancel":
+        # Save whatever we have to DB with cancelled status
+        try:
+            from database.db import save_appointment
+            import uuid
+            if not state.get("appointment_id"):
+                state["appointment_id"] = f"APT{uuid.uuid4().hex[:6].upper()}"
+            state["booking_confirmed"] = False
+            state["booking_success"]   = False
+            state["status"]            = "cancelled"
+            save_appointment(state)
+            logger.info(f"Cancelled booking saved: {state['appointment_id']}")
+        except Exception as e:
+            logger.warning(f"Could not save cancelled booking: {e}")
+
+        state["workflow_complete"]    = True
+        state["conversation_phase"]  = "done"
+        state["response"] = (
+            "I've cancelled your appointment. 🙏\n\n"
+            "Your information has been saved for future reference — "
+            "you can rebook anytime and we'll have your details ready.\n\n"
+            "Is there anything else I can help you with?"
+        )
+        # Update history and return immediately
+        history.append({"role": "assistant", "content": state["response"]})
+        state["conversation_context"] = history[-20:]
+        return state
+
+    # ── 8. Patient lookup ─────────────────────────────────────────────────────
+    if state.get("patient_name") and state.get("patient_dob") and not state.get("patient_id"):
+        try:
+            lookup = tools.patient_lookup.lookup(
+                state["patient_name"], state["patient_dob"]
+            )
+            state["patient_id"]           = lookup.get("patient_id", "NEW")
+            state["patient_type"]         = lookup.get("status", "new")
+            state["appointment_duration"] = lookup.get("duration_minutes", 60)
+            ptype = state["patient_type"]
+            dur   = state["appointment_duration"]
+            note  = (
+                f"\n\n_(You're a **new patient** — your consultation will be {dur} minutes.)_"
+                if ptype == "new"
+                else f"\n\n_(Welcome back! Your consultation will be {dur} minutes.)_"
+            )
+            llm_result["response"] = llm_result.get("response", "") + note
+        except Exception as e:
+            logger.warning(f"Patient lookup failed: {e}")
+            state["patient_id"]           = "NEW"
+            state["patient_type"]         = "new"
+            state["appointment_duration"] = 60
+
+    # ── 9. Availability check ─────────────────────────────────────────────────
+    if (state.get("preferred_doctor") and
+            state.get("appointment_date") and
+            not state.get("selected_time") and
+            not state.get("available_slots")):
+        try:
+            avail = tools.schedule_checker.check_availability(
+                state["preferred_doctor"],
+                state["appointment_date"],
+                state.get("appointment_duration", 60)
+            )
+            if avail.get("available"):
+                slots     = avail.get("slots", [])
+                wh        = avail.get("working_hours", "")
+                state["available_slots"] = slots
+                slot_list = "\n".join([f"{i}. {s}" for i, s in enumerate(slots, 1)])
+                llm_result["response"] += (
+                    f"\n\n⏰ **Available slots for {state['preferred_doctor']} "
+                    f"on {state['appointment_date']}** (hours: {wh}):\n"
+                    f"{slot_list}\n\nPlease pick one specific slot."
+                )
+            else:
+                err = avail.get("error", "No slots available")
+                llm_result["response"] += (
+                    f"\n\n⚠️ {err}. Would you like to try another date? "
+                    f"Suggested: {suggested}"
+                )
+                state["appointment_date"] = None
+                state["available_slots"]  = []
+        except Exception as e:
+            logger.warning(f"Availability check failed: {e}")
+
+    # ── 10. Validate selected_time is a real slot ─────────────────────────────
+    if state.get("selected_time") and state.get("available_slots"):
+        slots = state["available_slots"]
+        sel   = state["selected_time"]
+        if sel not in slots:
+            matched = next((s for s in slots if sel in s or s in sel), None)
+            if matched:
+                state["selected_time"] = matched
+            else:
+                state["selected_time"] = None
+                slot_list = "\n".join([f"{i}. {s}" for i, s in enumerate(slots, 1)])
+                llm_result["response"] = (
+                    f"That time isn't available. Please pick from:\n{slot_list}"
+                )
+
+    # ── 11. Phase + booking check ─────────────────────────────────────────────
+    core_fields = [
+        "patient_name","patient_dob","patient_phone","patient_email",
+        "preferred_doctor","appointment_date","selected_time"
+    ]
+    missing_after = [f for f in core_fields if not state.get(f)]
+
+    carrier = state.get("insurance_carrier", "")
+    if carrier and carrier.lower() not in ["none","no insurance","self pay","out of pocket",""]:
+        if not state.get("insurance_member_id"):
+            missing_after.append("insurance_member_id")
+        if not state.get("insurance_group_id"):
+            missing_after.append("insurance_group_id")
+
+    all_collected = len(missing_after) == 0
+
+    new_phase = llm_result.get("phase", state.get("conversation_phase","greeting"))
+    state["conversation_phase"] = new_phase
+    state["intent"]             = llm_result.get("intent","")
+    state["missing_fields"]     = missing_after
+
+    if llm_result.get("ready_to_book") and all_collected:
+        state["booking_confirmed"] = True
+        state["current_step"]      = "reminders"
+        state["conversation_phase"]= "done"
+    elif all_collected and new_phase not in ["confirming","done"]:
+        state["conversation_phase"] = "confirming"
+
+    # ── 12. Update history + response ────────────────────────────────────────
+    history.append({"role":"assistant","content":llm_result.get("response","")})
+    state["conversation_context"] = history[-20:]
+    state["response"] = llm_result.get("response","I'm here to help!")
+
+    return state
+
+
+def _update_state_from_extracted(state: dict, extracted: dict) -> None:
+    if extracted.get("patient_name") and not state.get("patient_name"):
+        valid, result = PatientDataValidator.validate_name(extracted["patient_name"])
+        if valid: state["patient_name"] = result
+
+    if extracted.get("patient_dob") and not state.get("patient_dob"):
+        valid, result = PatientDataValidator.validate_dob(extracted["patient_dob"])
+        if valid: state["patient_dob"] = result
+
+    if extracted.get("patient_phone") and not state.get("patient_phone"):
+        valid, result = ContactValidator.validate_phone(extracted["patient_phone"])
+        if valid: state["patient_phone"] = result
+
+    if extracted.get("patient_email") and not state.get("patient_email"):
+        valid, result = ContactValidator.validate_email(extracted["patient_email"])
+        if valid: state["patient_email"] = result
+
+    if extracted.get("preferred_doctor") and not state.get("preferred_doctor"):
+        state["preferred_doctor"] = extracted["preferred_doctor"]
+
+    if extracted.get("appointment_date") and not state.get("appointment_date"):
+        valid, _ = SchedulingValidator.validate_appointment_date(extracted["appointment_date"])
+        if valid: state["appointment_date"] = extracted["appointment_date"]
+
+    if extracted.get("selected_time") and not state.get("selected_time"):
+        state["selected_time"] = extracted["selected_time"]
+
+    if extracted.get("insurance_carrier") and not state.get("insurance_carrier"):
+        state["insurance_carrier"] = extracted["insurance_carrier"]
+
+    if extracted.get("insurance_member_id") and not state.get("insurance_member_id"):
+        state["insurance_member_id"] = extracted["insurance_member_id"]
+
+    if extracted.get("insurance_group_id") and not state.get("insurance_group_id"):
+        state["insurance_group_id"] = extracted["insurance_group_id"]
+
+    if extracted.get("has_insurance") is False and not state.get("insurance_carrier"):
+        state["insurance_carrier"]   = "None"
+        state["insurance_member_id"] = ""
+        state["insurance_group_id"]  = ""
+
+
+def _rule_based_fallback(state: dict, user_input: str) -> dict:
+    try:
+        from utils.nl_parser import NLParser
+        extracted = {}
+        name  = NLParser.extract_name(user_input)
+        if name:  extracted["patient_name"] = name
+        dob   = NLParser.extract_dob(user_input)
+        if dob:   extracted["patient_dob"]  = dob
+        phone = NLParser.extract_phone(user_input)
+        if phone: extracted["patient_phone"] = phone
+        email = NLParser.extract_email(user_input)
+        if email: extracted["patient_email"] = email
+    except Exception:
+        extracted = {}
+
+    missing = [f for f in [
+        "patient_name","patient_dob","patient_phone",
+        "patient_email","preferred_doctor","appointment_date","selected_time"
+    ] if not state.get(f)]
+
+    response = (
+        f"Could you share your {missing[0].replace('_',' ')}?"
+        if missing else
+        "I have all your details! Shall I confirm your appointment? (yes/no)"
+    )
+    return {
+        "intent": "provide_info",
+        "extracted": extracted,
+        "response": response,
+        "phase": state.get("conversation_phase","collecting"),
+        "ready_to_book": False
+    }
