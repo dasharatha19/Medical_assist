@@ -1,0 +1,87 @@
+# Environment Variables (NEVER PUSH - Contains API Keys!)
+.env
+.env.local
+.env.*.local
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Streamlit
+.streamlit/
+.streamlitconfig/
+
+# Database (Local Testing Only)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+*.tmp
+*.bak
+*.temp
+.cache/
+tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated Reports
+appointment_*.xlsx
+report_*.xlsx
+*.xlsx~
+
+# Test Data (Optional - uncomment if not needed in repo)
+# patients_test.json
+# doctors_test.json
+
+# Node modules (if using any frontend)
+node_modules/
+npm-debug.log
+
+# Credentials
+credentials.json
+secrets.json
+aws-credentials.txt
+
+# Large Files
+*.zip
+*.tar.gz
+*.rar
