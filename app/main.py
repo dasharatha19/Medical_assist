@@ -165,12 +165,19 @@ def render_quick_replies(manager: SessionManager) -> bool:
         return False
 
     # ── Doctor selection ──────────────────────────────────────────────────────
-    if 'available doctors' in last_lower and not state.get('preferred_doctor'):
+    doctor_triggers = [
+        'available doctors', 'which doctor', 'doctor would you',
+        'dr. john', 'dr. sarah', 'dr. michael', 'following doctors',
+        'these doctors', 'our doctors', 'doctors available',
+        'doctor available', 'see today', 'like to see'
+    ]
+    if any(t in last_lower for t in doctor_triggers) and not state.get('preferred_doctor'):
         for i, doc in enumerate(state.get("available_doctors", []), 1):
             label = (f"{i}. {doc['name']} — "
                      f"{doc.get('specialization','')} @ {doc.get('location','')}")
             if st.button(label, use_container_width=True, key=f"qr_doc_{i}"):
-                return _quick_reply(manager, str(i))
+                # Send full doctor name not just number
+                return _quick_reply(manager, doc['name'])
         return False
 
     # ── Date selection ────────────────────────────────────────────────────────
@@ -197,8 +204,12 @@ def render_quick_replies(manager: SessionManager) -> bool:
     # ── Time slot selection — ONLY if no slot selected yet ───────────────────
     if not state.get('selected_time'):
         slots = state.get("available_slots", [])
-        if slots and ('time slot' in last_lower or 'available slot' in last_lower
-                      or 'pick one' in last_lower or 'specific slot' in last_lower):
+        slot_triggers = [
+            'time slot', 'available slot', 'pick one', 'specific slot',
+            'following slot', 'these slot', 'time would', 'prefer',
+            'available from', 'following time', 'which time'
+        ]
+        if slots and any(t in last_lower for t in slot_triggers):
             cols = st.columns(min(len(slots), 4))
             for i, slot in enumerate(slots):
                 with cols[i % 4]:

@@ -467,38 +467,31 @@ class ReportService:
             report_path: Optional custom path for Excel reports
         """
         self.generator = ExcelReportGenerator(report_path)
-    
+        
     def record_appointment(self, state) -> bool:
-        """
-        Record appointment from scheduler state object
-        
-        Args:
-            state: SchedulerState object with appointment data
-        
-        Returns:
-            bool: True if recorded successfully
-        
-        Raises:
-            ReportException: If recording fails
-        """
-        # Extract data from state
-        appointment_data = {
-            'patient_name': state.patient_name,
-            'patient_dob': state.patient_dob,
-            'patient_type': state.patient_type,
-            'preferred_doctor': state.preferred_doctor,
-            'appointment_date': state.appointment_date,
-            'selected_time': state.selected_time,
-            'appointment_duration': state.appointment_duration,
-            'insurance_carrier': state.insurance_carrier or "None",
-            'insurance_member_id': state.insurance_member_id,
-            'insurance_group_id': state.insurance_group_id,
-            'booking_confirmed': state.booking_confirmed,
-            'appointment_id': state.appointment_id,
-            'notes': state.error_message if not state.booking_success else ""
-        }
-        
-        return self.generator.add_appointment_record(appointment_data)
+            # Extract data from state — supports both dict and object
+            if isinstance(state, dict):
+                get = lambda k, d=None: state.get(k, d)
+            else:
+                get = lambda k, d=None: getattr(state, k, d)
+
+            appointment_data = {
+                'patient_name':         get('patient_name'),
+                'patient_dob':          get('patient_dob'),
+                'patient_type':         get('patient_type'),
+                'preferred_doctor':     get('preferred_doctor'),
+                'appointment_date':     get('appointment_date'),
+                'selected_time':        get('selected_time'),
+                'appointment_duration': get('appointment_duration'),
+                'insurance_carrier':    get('insurance_carrier') or "None",
+                'insurance_member_id':  get('insurance_member_id'),
+                'insurance_group_id':   get('insurance_group_id'),
+                'booking_confirmed':    get('booking_confirmed'),
+                'appointment_id':       get('appointment_id'),
+                'notes': get('error_message') if not get('booking_success') else ""
+            }
+
+            return self.generator.add_appointment_record(appointment_data)
     
     def get_summary(self) -> Dict:
         """

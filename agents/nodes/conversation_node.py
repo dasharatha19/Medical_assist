@@ -4,8 +4,13 @@ Loads static rules from prompts/ folder.
 Dynamic context injected at runtime.
 """
 import json
+
+from pyarrow.util import doc
+from utils.config import Config
 import logging
 from datetime import datetime, timedelta
+import os
+from utils.verbose_logger import verbose
 from pathlib import Path
 from tools import tools
 from utils.llm_client import get_llm_client
@@ -13,8 +18,15 @@ from utils.validators import (
     PatientDataValidator, ContactValidator,
     SchedulingValidator
 )
-
 logger = logging.getLogger(__name__)
+
+# ── Terminal trace logging setup ──────────────────────────────────────────────
+import sys
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
+)
 
 PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
@@ -43,6 +55,8 @@ def _resolve_relative_date(text: str) -> str:
         return str(today + timedelta(days=1))
     if "today" in t:
         return str(today)
+    if any(word in t for word in ["asap", "as soon as possible", "urgent", "immediately", "right away", "now"]):
+        return str(today)
     days = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"]
     for i, day in enumerate(days):
         if day in t:
@@ -51,7 +65,6 @@ def _resolve_relative_date(text: str) -> str:
                 delta = 7
             return str(today + timedelta(days=delta))
     return ""
-
 
 def _build_system_prompt(state: dict, doctors_info: str, slots_block: str) -> str:
     """Assemble full system prompt from files + runtime context."""
@@ -172,9 +185,14 @@ CRITICAL:
 - NEVER re-ask for fields in ALREADY COLLECTED.
 """.strip()
 
-
 def conversation_node(state: dict) -> dict:
     user_input = (state.get("user_input") or "").strip()
+
+    verbose.node_start("conversation_node", user_input)
+    verbose.state_summary(state)
+    # ─────────────────────────────────────────────────────────────────────────
+
+
     llm        = get_llm_client()
     suggested  = ", ".join(_next_weekdays(3))
 
@@ -200,6 +218,52 @@ def conversation_node(state: dict) -> dict:
     except Exception as e:
         logger.warning(f"Could not load doctors: {e}")
         doctors_info = "Doctor information temporarily unavailable."
+
+    verbose.tool_call("get_doctors", {})
+    verbose.tool_result("get_doctors", doctors)
+
+    # ── 2b. Pre-match doctor name BEFORE building prompt ─────────────────────
+    _just_matched_doctor = False
+    available_docs = state.get("available_doctors", [])
+
+    # Check if input is an exact doctor name — allow change even if already set
+    _input_is_exact_doctor = any(
+        doc['name'].lower() == user_input.lower() or
+        doc['name'] == user_input
+        for doc in available_docs
+    )
+
+    if user_input and (_input_is_exact_doctor or not state.get("preferred_doctor")):
+        for doc in available_docs:
+            doc_name = doc['name'].lower()
+            inp = user_input.lower()
+            if doc_name in inp or inp in doc_name or \
+               any(part in inp for part in doc_name.split() if len(part) > 3):
+                old_doc = state.get("preferred_doctor", "")
+                if doc['name'] != old_doc:
+                    state["preferred_doctor"] = doc['name']
+                    if old_doc:  # switching doctors — reset date too
+                        state["appointment_date"] = None
+                        state["selected_time"]    = None
+                        state["available_slots"]  = []
+                    else:  # first time selecting doctor — keep date
+                        state["selected_time"]   = None
+                        state["available_slots"] = []
+                    _just_matched_doctor = True
+                    logger.info(f"Doctor changed: {old_doc} → {doc['name']}")
+                break
+        if _just_matched_doctor:
+            verbose.doctor_change("", state.get("preferred_doctor",""))
+
+    # ── 2c. Skip patient name extraction if input is a doctor name ────────────
+    _input_is_doctor = any(
+        doc['name'].lower() in user_input.lower() or
+        user_input.lower() in doc['name'].lower()
+        for doc in available_docs
+    )
+    if _input_is_doctor:
+        logger.info(f"Input '{user_input}' is doctor name, skipping patient name extraction")
+
 
     # ── 3. Build slots block (only from real availability check) ──────────────
     slots_block = ""
@@ -229,10 +293,25 @@ def conversation_node(state: dict) -> dict:
         role = "Patient" if msg["role"] == "user" else "MediBook"
         history_str += f"{role}: {msg['content']}\n"
 
+    # Build already-collected summary to reinforce system prompt
+    collected_reminder = ", ".join([
+        f"{k}={state[k]}" for k in [
+            "patient_name","patient_dob","patient_phone","patient_email",
+            "preferred_doctor","appointment_date","selected_time","insurance_carrier"
+        ] if state.get(k)
+    ]) or "nothing yet"
+
     prompt = (
         f"Conversation so far:\n{history_str}\n"
         f"Patient's latest message: {user_input}\n\n"
+        f"REMINDER — already confirmed in state (DO NOT ask for these again): {collected_reminder}\n\n"
         f"Respond as MediBook (JSON only):"
+)
+
+    verbose.llm_call(
+        Config.get_active_provider(),
+        Config.get_active_model(),
+        state.get("conversation_phase","greeting")
     )
 
     # ── 6. Call LLM ───────────────────────────────────────────────────────────
@@ -242,6 +321,13 @@ def conversation_node(state: dict) -> dict:
 
     if not llm_result:
         llm_result = _rule_based_fallback(state, user_input)
+    
+    if llm_result:
+        verbose.llm_result(
+            llm_result.get("intent",""),
+            llm_result.get("extracted",{}),
+            llm_result.get("phase","")
+        )
 
     # ── 7. Extract fields ─────────────────────────────────────────────────────
     extracted = llm_result.get("extracted", {})
@@ -311,20 +397,45 @@ def conversation_node(state: dict) -> dict:
                 state.get("appointment_duration", 60)
             )
             if avail.get("available"):
-                slots     = avail.get("slots", [])
-                wh        = avail.get("working_hours", "")
+                slots = avail.get("slots", [])
+                wh    = avail.get("working_hours", "")
                 state["available_slots"] = slots
                 slot_list = "\n".join([f"{i}. {s}" for i, s in enumerate(slots, 1)])
-                llm_result["response"] += (
-                    f"\n\n⏰ **Available slots for {state['preferred_doctor']} "
-                    f"on {state['appointment_date']}** (hours: {wh}):\n"
-                    f"{slot_list}\n\nPlease pick one specific slot."
-                )
+
+                # Check if user's preferred time is in slots
+                preferred_time = state.get("selected_time") or ""
+                time_match = next((s for s in slots if preferred_time in s or s in preferred_time), None) if preferred_time else None
+
+                if time_match:
+                    availability_msg = (
+                        f"\n\n✅ Great news! **{state['preferred_doctor']}** has your preferred time "
+                        f"**{time_match}** available on {state['appointment_date']}!\n\n"
+                        f"Other available slots (hours: {wh}):\n{slot_list}\n\n"
+                        f"Would you like to book {time_match}, or pick a different slot?"
+                    )
+                    state["selected_time"] = time_match
+                else:
+                    if preferred_time:
+                        availability_msg = (
+                            f"\n\n⚠️ **{preferred_time}** is not available for {state['preferred_doctor']} "
+                            f"on {state['appointment_date']}.\n\n"
+                            f"⏰ **Available slots** (hours: {wh}):\n{slot_list}\n\n"
+                            f"Would you like to book one of these slots instead?"
+                        )
+                    else:
+                        availability_msg = (
+                            f"\n\n⏰ **Available slots for {state['preferred_doctor']} "
+                            f"on {state['appointment_date']}** (hours: {wh}):\n"
+                            f"{slot_list}\n\n"
+                            f"Would you like to book one of these slots?"
+                        )
+                llm_result["response"] += availability_msg
             else:
                 err = avail.get("error", "No slots available")
                 llm_result["response"] += (
-                    f"\n\n⚠️ {err}. Would you like to try another date? "
-                    f"Suggested: {suggested}"
+                    f"\n\n⚠️ {err} for {state['preferred_doctor']} on {state['appointment_date']}. "
+                    f"Would you like to try a different date or another doctor? "
+                    f"Suggested dates: {suggested}"
                 )
                 state["appointment_date"] = None
                 state["available_slots"]  = []
@@ -375,9 +486,23 @@ def conversation_node(state: dict) -> dict:
         state["conversation_phase"] = "confirming"
 
     # ── 12. Update history + response ────────────────────────────────────────
-    history.append({"role":"assistant","content":llm_result.get("response","")})
+    if _just_matched_doctor:
+        override = (
+            f"Great choice! You've selected **{state['preferred_doctor']}**. "
+            f"Now, could you please tell me your **full name**?"
+        )
+        state["response"]           = override
+        state["conversation_phase"] = "collecting"
+        history.append({"role": "assistant", "content": override})
+    else:
+        state["response"] = llm_result.get("response", "I'm here to help!")
+        history.append({"role": "assistant", "content": state["response"]})
+
     state["conversation_context"] = history[-20:]
-    state["response"] = llm_result.get("response","I'm here to help!")
+
+    verbose.missing_fields(state.get("missing_fields", []))
+    verbose.node_end("conversation_node", state.get("response",""))
+    # ─────────────────────────────────────────────────────────────────────────
 
     return state
 
@@ -399,15 +524,29 @@ def _update_state_from_extracted(state: dict, extracted: dict) -> None:
         valid, result = ContactValidator.validate_email(extracted["patient_email"])
         if valid: state["patient_email"] = result
 
-    if extracted.get("preferred_doctor") and not state.get("preferred_doctor"):
-        state["preferred_doctor"] = extracted["preferred_doctor"]
+    if extracted.get("preferred_doctor"):
+        # Allow doctor change — user may switch their selection
+        new_doc = extracted["preferred_doctor"]
+        old_doc = state.get("preferred_doctor", "")
+        if new_doc != old_doc:
+            state["preferred_doctor"] = new_doc
+            # Reset scheduling data when doctor changes
+            state["appointment_date"]  = None
+            state["selected_time"]     = None
+            state["available_slots"]  = []
+            logger.info(f"Doctor changed: {old_doc} → {new_doc}")
 
     if extracted.get("appointment_date") and not state.get("appointment_date"):
         valid, _ = SchedulingValidator.validate_appointment_date(extracted["appointment_date"])
         if valid: state["appointment_date"] = extracted["appointment_date"]
 
     if extracted.get("selected_time") and not state.get("selected_time"):
-        state["selected_time"] = extracted["selected_time"]
+        available = state.get("available_slots", [])
+        if available:
+            matched = next((s for s in available if
+                        extracted["selected_time"] in s or s in extracted["selected_time"]), None)
+            if matched:
+                state["selected_time"] = matched
 
     if extracted.get("insurance_carrier") and not state.get("insurance_carrier"):
         state["insurance_carrier"] = extracted["insurance_carrier"]

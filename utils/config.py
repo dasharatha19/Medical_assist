@@ -2,6 +2,9 @@
 import os
 import logging
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()  # ← loads .env file into os.environ BEFORE any os.getenv() calls
 
 logger = logging.getLogger(__name__)
 

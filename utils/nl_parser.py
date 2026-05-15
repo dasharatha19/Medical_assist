@@ -20,55 +20,47 @@ class NLParser:
     Natural Language Parser for appointment scheduling
     Extracts fields from conversational user input
     """
-    
+        
     @staticmethod
     def extract_name(user_input: str) -> Optional[str]:
-        """
-        Extract name from various user input formats
-        
-        Handles:
-        - "John Smith"
-        - "My name is John Smith"
-        - "I am John Smith"
-        - "Please call me John Smith"
-        - "John" (single name)
-        
-        Args:
-            user_input: User's conversational input
-            
-        Returns:
-            Extracted name or None if parsing fails
-        """
         if not user_input or not user_input.strip():
             return None
-        
+
         text = user_input.strip()
-        
-        # Pattern 1: "My name is ..." or "I am ..." or "Please call me ..."
+
+        # Pattern 1: "My name is ..." or "I am ..." or "call me ..."
         patterns = [
-            r'(?:my name is|i am|call me)\s+([A-Z][a-zA-Z\s\.]+)',
-            r'(?:my name is|i am|call me)\s+"(.+?)"',
-            r'(?:name:?|called:?)\s+([A-Z][a-zA-Z\s\.]+)',
+            r'(?:my name is|i am|call me|i\'m|im)\s+([A-Za-z][a-zA-Z\s\.\-\']+)',
+            r'(?:name:?|called:?)\s+([A-Za-z][a-zA-Z\s\.\-\']+)',
         ]
-        
         for pattern in patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
                 name = match.group(1).strip()
-                if name and len(name) > 1:
+                # Stop at punctuation or common stop words
+                name = re.split(r'[,\.\!\?]|\b(and|or|my|the|is|was)\b', name, flags=re.IGNORECASE)[0].strip()
+                if name and len(name) >= 2:
                     return name
-        
-        # Pattern 2: CapitalizedWords (Direct name entry)
-        # Match "FirstName LastName" or "FirstName" format
-        if re.match(r'^[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*$', text):
-            return text
-        
-        # Pattern 3: Start with capital letter and has space
-        parts = text.split()
-        if parts and parts[0][0].isupper():
-            # Return first 3 words as name (e.g., "John Michael Smith")
-            return ' '.join(parts[:3])
-        
+
+        # Pattern 2: FIX — allow single-letter words (initials like "R")
+        # Matches "Dasharatha R" or "John Smith" or "Mary J. Blige"
+        if re.match(r'^[A-Za-z][a-zA-Z]*(?:\s+[A-Za-z][a-zA-Z\.]*)*$', text):
+            return text.strip()
+
+        # Pattern 3: First word is capitalized and input is short (likely a name response)
+        words = text.split()
+        if len(words) <= 4:
+            # Check if it looks like a name (mostly letters, maybe initials)
+            name_words = []
+            for w in words:
+                cleaned = re.sub(r'[^a-zA-Z\.\-\']', '', w)
+                if cleaned and re.match(r'^[A-Za-z]', cleaned):
+                    name_words.append(cleaned)
+                else:
+                    break  # stop at first non-name word
+            if name_words and len(' '.join(name_words)) >= 2:
+                return ' '.join(name_words)
+
         return None
     
     @staticmethod
