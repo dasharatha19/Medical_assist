@@ -1,0 +1,37 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment files (never commit secrets)
+.env
+.env.local
+.env.production
+
+# Git
+.git/
+.gitignore
+
+# VS Code
+.vscode/
+
+# Streamlit local config
+.streamlit/secrets.toml
+
+# Data files (optional — remove if app needs them)
+data/*.csv
+data/*.xlsx
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
