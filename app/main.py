@@ -169,9 +169,24 @@ def render_quick_replies(manager: SessionManager) -> bool:
         'available doctors', 'which doctor', 'doctor would you',
         'dr. john', 'dr. sarah', 'dr. michael', 'following doctors',
         'these doctors', 'our doctors', 'doctors available',
-        'doctor available', 'see today', 'like to see'
+        'doctor available', 'see today', 'like to see',
+        'which doctor would', 'choose a doctor', 'select a doctor'
     ]
-    if any(t in last_lower for t in doctor_triggers) and not state.get('preferred_doctor'):
+    asking_for_doctor = any(t in last_lower for t in doctor_triggers)
+    personal_info_questions = [
+        'full name', 'your name', 'date of birth', 'phone number',
+        'email address', 'email', 'phone', 'date of birth',
+        'already have', 'already confirmed', 'already noted',
+        'already set', 'changing the date', 'accommodate',
+        'insurance', 'member id', 'group id'
+    ]
+    doctor_already_confirmed = (
+        state.get('preferred_doctor') and any(
+            x in last_lower for x in personal_info_questions
+        )
+    ) or st.session_state.get('change_card_done', False)
+    slots_already_shown = bool(state.get('available_slots'))
+    if asking_for_doctor and not doctor_already_confirmed and not slots_already_shown:
         for i, doc in enumerate(state.get("available_doctors", []), 1):
             label = (f"{i}. {doc['name']} — "
                      f"{doc.get('specialization','')} @ {doc.get('location','')}")
@@ -207,7 +222,9 @@ def render_quick_replies(manager: SessionManager) -> bool:
         slot_triggers = [
             'time slot', 'available slot', 'pick one', 'specific slot',
             'following slot', 'these slot', 'time would', 'prefer',
-            'available from', 'following time', 'which time'
+            'available from', 'following time', 'which time',
+            'following times', 'available at', 'available times',
+            'book one', 'these times', 'like to book', 'slot'
         ]
         if slots and any(t in last_lower for t in slot_triggers):
             cols = st.columns(min(len(slots), 4))
@@ -231,6 +248,189 @@ def render_quick_replies(manager: SessionManager) -> bool:
         return False
 
     return False
+
+def render_change_appointment_card(manager: SessionManager) -> bool:
+    messages = manager.get_conversation_history()
+    if not messages or messages[-1]['role'] != 'assistant':
+        return False
+
+    last_lower = messages[-1]['content'].lower()
+    state = manager.agent_state or {}
+
+    if st.session_state.get('change_card_done'):
+        return False
+
+    step = st.session_state.get('change_card_step', None)
+
+    # Trigger step 1 only from bot message
+    if step is None:
+        # Never show change card at confirmation or done stage
+        blocking_phrases = [
+            'shall i confirm', 'confirm your appointment',
+            'yes/no', 'all your details', 'ready to confirm',
+            'please confirm', 'go ahead and confirm'
+        ]
+        if any(b in last_lower for b in blocking_phrases):
+            return False
+
+        trigger_phrases = [
+            'already set for', 'would you like to change',
+            'proceed with tomorrow', 'proceed with today',
+            'would you like to proceed', 'confirm if you',
+            'changing the date', 'like to change the date',
+            'accommodate that', 'previously discussed',
+            'originally booked for', 'confirm you',
+            'check the available slots', 'booking for today',
+            'booking for tomorrow', 'appointment date was set',
+            'check dr.'
+        ]
+        if not any(t in last_lower for t in trigger_phrases):
+            return False
+        st.session_state['change_card_step'] = 1
+        step = 1
+
+    current_doc  = state.get('preferred_doctor', 'current doctor')
+    current_date = state.get('appointment_date', '')
+    from datetime import datetime
+    today_str = str(datetime.now().date())
+
+    st.markdown("""
+    <div style="background:#fff;border:1.5px solid #7c3aed;
+                border-radius:16px;padding:20px;margin:8px 0;">
+    """, unsafe_allow_html=True)
+
+    if step == 1:
+        # ── Step 1: Date question only ─────────────────────────────────
+        st.markdown("""
+        <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:12px;">
+            📅 Would you like to change the appointment date?
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button(f"✅ Change to today ({today_str})",
+                         use_container_width=True, key="card_date_today"):
+                st.session_state['change_card_date'] = today_str
+                st.session_state['change_card_step'] = 2
+                # Just confirm with a bot message, no slot fetch yet
+                manager.add_message("user", f"Yes change date to today {today_str}")
+                manager.add_message("assistant",
+                    f"Got it! I've updated your date to **today ({today_str})**. "
+                    f"Now, would you like to keep **{current_doc}** or choose a different doctor?")
+                st.rerun()
+
+        with col2:
+            if st.button(f"📅 Keep {current_date}",
+                         use_container_width=True, key="card_date_keep"):
+                st.session_state['change_card_date'] = current_date
+                st.session_state['change_card_step'] = 2
+                manager.add_message("user", f"Keep the date as {current_date}")
+                manager.add_message("assistant",
+                    f"Got it! Keeping your date as **{current_date}**. "
+                    f"Now, would you like to keep **{current_doc}** or choose a different doctor?")
+                st.rerun()
+
+        custom = st.text_input("Or type a date/preference:",
+                               key="card_date_custom",
+                               placeholder="e.g. next Monday, 2026-05-20...")
+        if st.button("Send ➤", key="card_date_send") and custom:
+            st.session_state['change_card_date'] = custom
+            st.session_state['change_card_step'] = 2
+            manager.add_message("user", custom)
+            manager.add_message("assistant",
+                f"Got it! I've noted your date preference as **{custom}**. "
+                f"Now, would you like to keep **{current_doc}** or choose a different doctor?")
+            st.rerun()
+
+    elif step == 2:
+        # ── Step 2: Doctor question only ───────────────────────────────
+        st.markdown("""
+        <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:12px;">
+            👨‍⚕️ Would you like to change the doctor too?
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"""
+        <div style="background:#f5f3ff;border-radius:10px;padding:8px 14px;
+                    margin-bottom:10px;font-size:13px;color:#5b21b6;">
+            📌 Currently selected: <b>{current_doc}</b>
+        </div>
+        """, unsafe_allow_html=True)
+
+        chosen_date = st.session_state.get('change_card_date', current_date)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("✅ Keep current doctor",
+                         use_container_width=True, key="card_doc_keep"):
+                st.session_state['change_card_done'] = True
+                st.session_state.pop('change_card_step', None)
+                if manager.agent_state:
+                    manager.agent_state['available_slots']  = []
+                    manager.agent_state['selected_time']    = None
+                    manager.agent_state['appointment_date'] = chosen_date
+                final_msg = f"Keep doctor as {current_doc} and date is {chosen_date}, please show available slots"
+                manager.add_message("user", final_msg)
+                response, _ = manager.run_agent_step(final_msg)
+                if response:
+                    manager.add_message("assistant", response)
+                st.rerun()
+
+        with col2:
+            if st.button("🔄 Change doctor",
+                         use_container_width=True, key="card_doc_change"):
+                st.session_state['change_card_step'] = 3
+                manager.add_message("user", "I want to change the doctor")
+                manager.add_message("assistant",
+                    "Sure! Here are our available doctors. Please choose one:")
+                st.rerun()
+
+        custom = st.text_input("Or type your preference:",
+                               key="card_doc_custom",
+                               placeholder="e.g. Dr. John Smith...")
+        if st.button("Send ➤", key="card_doc_send") and custom:
+            st.session_state['change_card_done'] = True
+            st.session_state.pop('change_card_step', None)
+            manager.add_message("user", custom)
+            response, _ = manager.run_agent_step(custom)
+            if response:
+                manager.add_message("assistant", response)
+            st.rerun()
+
+    elif step == 3:
+        # ── Step 3: Doctor list ────────────────────────────────────────
+        st.markdown("""
+        <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:12px;">
+            👨‍⚕️ Choose a doctor:
+        </div>
+        """, unsafe_allow_html=True)
+
+        chosen_date = st.session_state.get('change_card_date', current_date)
+
+        for i, doc in enumerate(state.get("available_doctors", []), 1):
+            is_current = doc['name'] == current_doc
+            label = (
+                f"{i}. {doc['name']} — {doc.get('specialization','')} "
+                f"@ {doc.get('location','')} {'📌 (current)' if is_current else ''}"
+            )
+            if st.button(label, use_container_width=True, key=f"card_doc_{i}"):
+                st.session_state['change_card_done'] = True
+                st.session_state.pop('change_card_step', None)
+                if manager.agent_state:
+                    manager.agent_state['available_slots'] = []
+                    manager.agent_state['selected_time']   = None
+                    manager.agent_state['appointment_date'] = chosen_date
+                    manager.agent_state['preferred_doctor'] = doc['name']
+                final_msg = f"Change doctor to {doc['name']} and date is {chosen_date}, please show available slots"
+                manager.add_message("user", final_msg)
+                response, _ = manager.run_agent_step(final_msg)
+                if response:
+                    manager.add_message("assistant", response)
+                st.rerun()
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    return True
 
 
 def _quick_reply(manager: SessionManager, value: str) -> bool:
@@ -275,6 +475,10 @@ def render_text_input(manager: SessionManager) -> bool:
     user_input = render_input_form()
     if user_input is None:
         return False
+    # Reset change card if user types freely
+    st.session_state.pop('change_card_step', None)
+    st.session_state.pop('change_card_done', None)
+    st.session_state.pop('change_card_date', None)
     manager.add_message("user", user_input)
     return True
 
@@ -330,6 +534,8 @@ def main():
         if not manager.workflow_complete:
             if render_dob_picker(manager):
                 st.rerun()
+            if render_change_appointment_card(manager):
+                st.rerun()
             if render_quick_replies(manager):
                 st.rerun()
             st.subheader("💬 Your Response")
@@ -345,6 +551,9 @@ def main():
             
             if st.button("🔄 Book Another Appointment", use_container_width=True):
                 manager.reset_conversation()
+                st.session_state.pop('change_card_step', None)
+                st.session_state.pop('change_card_done', None)
+                st.session_state.pop('change_card_date', None)
                 st.rerun()
 
 

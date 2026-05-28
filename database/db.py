@@ -78,7 +78,8 @@ def create_tables():
             specialization TEXT,
             location       TEXT,
             working_hours  TEXT,
-            break_time     TEXT
+            break_time     TEXT,
+            conditions     TEXT
         );
 
         CREATE TABLE IF NOT EXISTS doctor_slots (
@@ -87,6 +88,71 @@ def create_tables():
             date        TEXT,
             time_slot   TEXT,
             status      TEXT DEFAULT 'available'
+        );
+                
+                -- forms table
+        CREATE TABLE IF NOT EXISTS forms (
+            form_id          TEXT PRIMARY KEY,
+            appointment_id   TEXT,
+            patient_id       TEXT,
+            patient_name     TEXT,
+            patient_email    TEXT,
+            doctor           TEXT,
+            appointment_date TEXT,
+            form_type        TEXT,
+            form_token       TEXT,
+            form_url         TEXT,
+            is_new_patient   BOOLEAN,
+            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            sent             BOOLEAN DEFAULT FALSE,
+            sent_at          TIMESTAMP,
+            completed        BOOLEAN DEFAULT FALSE,
+            completed_at     TIMESTAMP,
+            delivery_attempts INTEGER DEFAULT 0
+        );
+
+        -- reminders table
+        CREATE TABLE IF NOT EXISTS reminders (
+            reminder_id      TEXT PRIMARY KEY,
+            appointment_id   TEXT,
+            patient_email    TEXT,
+            patient_phone    TEXT,
+            reminder_type    TEXT,
+            scheduled_time   TIMESTAMP,
+            sent             BOOLEAN DEFAULT FALSE,
+            sent_at          TIMESTAMP,
+            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+                CREATE TABLE IF NOT EXISTS forms (
+            form_id           TEXT PRIMARY KEY,
+            appointment_id    TEXT,
+            patient_id        TEXT,
+            patient_name      TEXT,
+            patient_email     TEXT,
+            doctor            TEXT,
+            appointment_date  TEXT,
+            form_type         TEXT,
+            form_token        TEXT,
+            form_url          TEXT,
+            is_new_patient    BOOLEAN DEFAULT TRUE,
+            sent              BOOLEAN DEFAULT FALSE,
+            sent_at           TIMESTAMP,
+            completed         BOOLEAN DEFAULT FALSE,
+            completed_at      TIMESTAMP,
+            delivery_attempts INTEGER DEFAULT 0,
+            created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS reminders (
+            reminder_id      TEXT PRIMARY KEY,
+            appointment_id   TEXT,
+            patient_email    TEXT,
+            patient_phone    TEXT,
+            reminder_type    TEXT,
+            scheduled_time   TIMESTAMP,
+            sent             BOOLEAN DEFAULT FALSE,
+            sent_at          TIMESTAMP,
+            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS appointments (
@@ -222,10 +288,10 @@ def seed_doctors():
 def initialize_database():
     create_database_if_not_exists()
     create_tables()
+    migrate_add_conditions()
     seed_patients()
     seed_doctors()
     logger.info("PostgreSQL database ready")
-
 
 # ── Patient Queries ───────────────────────────────────────────────────────────
 def lookup_patient(name: str, dob: str) -> dict:
@@ -261,7 +327,13 @@ def register_new_patient(data: dict) -> str:
 def get_all_doctors() -> list:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("SELECT * FROM doctors")
+    cur.execute("""
+        SELECT doctor_id, name, specialization, 
+               location, working_hours, break_time,
+               COALESCE(conditions, '') as conditions
+        FROM doctors
+        ORDER BY name
+    """)
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -360,3 +432,139 @@ def export_appointments_excel(output_path: str) -> str:
         return None
     pd.DataFrame(appointments).to_excel(output_path, index=False)
     return output_path
+
+def migrate_add_conditions():
+    """Add conditions column if it doesn't exist yet."""
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        ALTER TABLE doctors 
+        ADD COLUMN IF NOT EXISTS conditions TEXT
+    """)
+    # Update conditions for existing doctors
+    conditions_map = {
+        'DR_Dr_John_Smith': 
+            'common cold, fever, flu, headache, general checkup, fatigue, '
+            'cough, stomach ache, minor injuries, general consultation',
+        'DR_Dr_Sarah_Johnson': 
+            'chest pain, heart issues, blood pressure, palpitations, '
+            'shortness of breath, cardiovascular, heart attack, cardiac',
+        'DR_Dr_Michael_Brown': 
+            'bone pain, joint pain, back pain, fractures, muscle pain, '
+            'knee pain, sports injuries, surgery, spine, shoulder pain'
+    }
+    for doctor_id, conditions in conditions_map.items():
+        cur.execute("""
+            UPDATE doctors SET conditions = %s
+            WHERE doctor_id = %s AND (conditions IS NULL OR conditions = '')
+        """, (conditions, doctor_id))
+    conn.commit()
+    cur.close()
+    conn.close()
+    logger.info("Conditions column migrated")
+
+
+
+
+    # ── Forms Queries ─────────────────────────────────────────────────────────────
+def save_form(form_data: dict) -> bool:
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("""
+        INSERT INTO forms (
+            form_id, appointment_id, patient_id, patient_name,
+            patient_email, doctor, appointment_date, form_type,
+            form_token, form_url, is_new_patient
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (form_id) DO UPDATE SET
+            sent              = EXCLUDED.sent,
+            sent_at           = EXCLUDED.sent_at,
+            delivery_attempts = EXCLUDED.delivery_attempts
+    """, (
+        form_data.get('form_id'),
+        form_data.get('appointment_id'),
+        form_data.get('patient_id'),
+        form_data.get('patient_name'),
+        form_data.get('patient_email'),
+        form_data.get('doctor'),
+        form_data.get('appointment_date'),
+        form_data.get('form_type'),
+        form_data.get('form_token'),
+        form_data.get('form_url'),
+        form_data.get('is_new_patient', True)
+    ))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return True
+
+def get_form(appointment_id: str) -> dict:
+    conn = get_connection()
+    cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute("SELECT * FROM forms WHERE appointment_id=%s", (appointment_id,))
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    return dict(row) if row else None
+
+def update_form_sent(appointment_id: str) -> bool:
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("""
+        UPDATE forms SET sent=TRUE, sent_at=NOW(),
+        delivery_attempts = delivery_attempts + 1
+        WHERE appointment_id=%s
+    """, (appointment_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return True
+
+def update_form_completed(appointment_id: str) -> bool:
+    conn = get_connection()
+    cur  = conn.cursor()
+    cur.execute("""
+        UPDATE forms SET completed=TRUE, completed_at=NOW()
+        WHERE appointment_id=%s
+    """, (appointment_id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return True
+
+# ── Reminders Queries ─────────────────────────────────────────────────────────
+def save_reminders(appointment_id: str, email: str, phone: str,
+                   reminders: list) -> bool:
+    conn = get_connection()
+    cur  = conn.cursor()
+    for r in reminders:
+        cur.execute("""
+            INSERT INTO reminders (
+                reminder_id, appointment_id, patient_email,
+                patient_phone, reminder_type, scheduled_time
+            ) VALUES (%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (reminder_id) DO NOTHING
+        """, (
+            r['reminder_id'],
+            appointment_id,
+            email,
+            phone,
+            r['reminder_type'],
+            r['scheduled_time']
+        ))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return True
+
+def get_reminders(appointment_id: str) -> list:
+    conn = get_connection()
+    cur  = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT * FROM reminders WHERE appointment_id=%s ORDER BY scheduled_time",
+        (appointment_id,)
+    )
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [dict(r) for r in rows]

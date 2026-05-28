@@ -15,20 +15,21 @@ class SchedulingService:
         self.doctor_avail = DoctorAvailability()
     
     def get_available_doctors(self) -> list:
-        """
-        Get list of all available doctors with full details
-        
-        Returns:
-            list: List of doctor dicts with name, specialization, location, hours
-        """
+        """Get all doctors directly from DB in one call."""
         doctors = []
         for doctor_name in self.doctor_avail.get_available_doctors():
             info = self.doctor_avail.get_doctor_info(doctor_name)
+            if not info:
+                continue
             doctors.append({
-                'name': doctor_name,
-                'specialization': info['specialization'],
-                'location': info['location'],
-                'hours': f"{info['working_hours']['start']} - {info['working_hours']['end']}"
+                'name':           doctor_name,
+                'specialization': info.get('specialization', 'General'),
+                'location':       info.get('location', 'Main Clinic'),
+                'conditions':     info.get('conditions', ''),
+                'hours': (
+                    f"{info['working_hours']['start']} - "
+                    f"{info['working_hours']['end']}"
+                )
             })
         return doctors
     

@@ -10,13 +10,6 @@ from agents.nodes.booking_node import booking_node
 from agents.nodes.reminder_node import reminder_node
 from agents.nodes.form_distribution_node import form_distribution_node
 
-# ── LangSmith auto-connects via env vars ──────────────────────────────────────
-# Set these in your .env:
-# LANGCHAIN_TRACING_V2=true
-# LANGCHAIN_API_KEY=your_key
-# LANGCHAIN_PROJECT=medibook-agent
-# No extra code needed — LangGraph traces automatically when env vars are set
-
 
 def route_after_conversation(state: SchedulerState) -> str:
     if state.get("workflow_complete"):
