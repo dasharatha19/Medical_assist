@@ -82,7 +82,7 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
     # =========================================================================
     try:
         # Prepare form creation parameters
-        appointment_datetime = f"{state.get("appointment_date")} {state.get("selected_time")}"
+        appointment_datetime = f"{state.get('appointment_date')} {state.get('selected_time')}"
         
         form_result = form_service.create_form_for_appointment(
             appointment_id=state.get("appointment_id"),
@@ -108,8 +108,8 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
         state["form_type"] =form_result.get('form_type', "")
         
         print(f"✓ Forms created successfully")
-        print(f"  Form Type: {state.get("form_type")}")
-        print(f"  Form Token: {state.get("form_token")[:8]}...")
+        print(f"  Form Type: {state.get('form_type')}")
+        print(f"  Form Token: {state.get('form_token')[:8]}...")
         
     except Exception as e:
         error_msg = f"Error creating forms: {str(e)}"
@@ -122,7 +122,7 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
     # SEND FORMS TO PATIENT
     # =========================================================================
     try:
-        print(f"\n📧 Sending forms to patient ({state.get("patient_email")})...\n")
+        print(f"\n📧 Sending forms to patient ({state.get('patient_email')})...\n")
         
         success, message = form_service.send_form_email(
             appointment_id=state.get("appointment_id"),
@@ -131,7 +131,7 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
         )
         
         if success:
-            print(f"✓ Forms sent successfully to {state.get("patient_email")}")
+            print(f"✓ Forms sent successfully to {state.get('patient_email')}")
             state["form_sent"] =True
             state["form_distribution_status"] ="sent"
             
@@ -164,9 +164,9 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
         print(f"USER INSTRUCTIONS - FORM COMPLETION")
         print(f"{'='*70}\n")
         
-        print(f"📝 {state.get("form_type")}")
-        print(f"   Status: {'✓ Sent to email' if state.get("form_sent") else '⚠️  Not emailed (access via URL)'}")
-        print(f"\n   Form URL: {state.get("form_url")}")
+        print(f"📝 {state.get('form_type')}")
+        print(f"   Status: {'✓ Sent to email' if state.get('form_sent') else '⚠️  Not emailed (access via URL)'}")
+        print(f"\n   Form URL: {state.get('form_url')}")
         
         # Show required fields
         fields = form_status.get('status', {}).get('fields', [])
@@ -188,7 +188,7 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
     
     logger.info(
         f"Form distribution completed "
-        f"(ID: {state.get("appointment_id")}, Token: {state.get("form_token")[:8]}...)"
+        f"(ID: {state.get('appointment_id')}, Token: {state.get('form_token')[:8]}...)"
     )
     
     return state
