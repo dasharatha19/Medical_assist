@@ -285,5 +285,4 @@ This project was built as part of the RagaAI Data Science Internship case study.
 
 ## 👤 Author
 
-Dasharatha R  
-Data Science Intern — RagaAI  
+Dasharatha R
