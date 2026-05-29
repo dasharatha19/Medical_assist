@@ -1,4 +1,4 @@
-﻿"""
+"""
 Reminder Service Layer — PostgreSQL only.
 Replaces reminder_manager.py dependency.
 """

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Reminder Node — sets up reminders and triggers form distribution.
 Booking is already done by booking_node — never book again here.
 """

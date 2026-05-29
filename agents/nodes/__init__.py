@@ -1,4 +1,4 @@
-﻿"""Agents nodes module"""
+"""Agents nodes module"""
 from .conversation_node import conversation_node
 from .booking_node import booking_node
 from .reminder_node import reminder_node

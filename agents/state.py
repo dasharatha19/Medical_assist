@@ -1,4 +1,4 @@
-﻿"""
+"""
 Appointment Scheduler Agent State
 TypedDict-based state for LangGraph compatibility
 """

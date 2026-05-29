@@ -1,4 +1,4 @@
-﻿"""
+"""
 Reminder Tool
 Simple wrapper that uses ReminderService
 Provides: setup reminders, get reminders

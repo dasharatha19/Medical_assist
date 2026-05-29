@@ -1,4 +1,4 @@
-﻿"""
+"""
 Patient Service Layer — PostgreSQL only.
 Replaces patient_database.py dependency.
 """

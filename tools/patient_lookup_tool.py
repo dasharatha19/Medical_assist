@@ -1,4 +1,4 @@
-﻿"""
+"""
 Patient Lookup Tool
 Simple wrapper that uses PatientService
 Provides: lookup by name/DOB, update preferences

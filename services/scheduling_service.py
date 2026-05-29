@@ -1,4 +1,4 @@
-﻿"""
+"""
 Scheduling Service Layer
 Encapsulates appointment scheduling business logic
 Calls doctor_availability.py for availability checking

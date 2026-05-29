@@ -1,4 +1,4 @@
-﻿"""Services layer initialization"""
+"""Services layer initialization"""
 from .patient_service import PatientService
 from .scheduling_service import SchedulingService
 from .reminder_service import ReminderService

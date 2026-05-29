@@ -1,4 +1,4 @@
-﻿"""
+"""
 Booking Tool
 Simple wrapper that uses SchedulingService and PatientService
 Provides: book appointment (ONLY after confirmation)

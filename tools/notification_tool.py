@@ -1,4 +1,4 @@
-﻿"""
+"""
 Notification Tool — PostgreSQL only.
 Removes form_manager and insurance_manager dependencies.
 """

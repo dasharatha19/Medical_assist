@@ -1,4 +1,4 @@
-﻿"""
+"""
 Appointment Scheduler Agent - Agent Layer Init
 Initializes the LangGraph-based agent system
 """

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Schedule Checker Tool
 Simple wrapper that uses SchedulingService
 Provides: get doctors, check availability

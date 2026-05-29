@@ -1,4 +1,4 @@
-﻿"""Tools layer initialization and registry"""
+"""Tools layer initialization and registry"""
 from .patient_lookup_tool import patient_lookup_tool
 from .schedule_checker_tool import schedule_checker_tool
 from .booking_tool import booking_tool

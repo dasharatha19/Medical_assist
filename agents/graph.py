@@ -1,4 +1,4 @@
-﻿"""
+"""
 LangGraph Scheduling Graph — properly wired with LangSmith tracing.
 """
 import os
