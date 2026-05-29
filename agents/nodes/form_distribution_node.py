@@ -136,12 +136,14 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
             state["form_distribution_status"] ="sent"
             
             # Log delivery
-            logger.info(f"Form sent for appointment {state.get("appointment_id")}")
+            # logger.info(f"Form sent for appointment {state.get('appointment_id')}")
+            logger.info(f"Form sent for appointment {state.get('appointment_id')}")
         else:
             # Form creation succeeded but delivery failed
             # This is not a critical failure - user can access form via URL
             print(f"⚠️  Warning: Could not send form email ({message})")
-            print(f"   Patient can access form at: {state.get("form_url")}")
+            # print(f"   Patient can access form at: {state.get("form_url")}")
+            print(f"   Patient can access form at: {state.get('form_url')}")
             
             state["form_sent"] =False
             state["form_distribution_status"] ="creation_only"
@@ -177,7 +179,8 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
                 print(f"   - {field.get('label')}{required}")
         
         print(f"\n   ⏰ Please complete this form before your appointment")
-        print(f"      ({state.get("appointment_date")} with {state.get("preferred_doctor")})")
+        # print(f"      ({state.get("appointment_date")} with {state.get("preferred_doctor")})")
+        print(f"      ({state.get('appointment_date')} with {state.get('preferred_doctor')})")
         
         print(f"\n{'='*70}\n")
     
