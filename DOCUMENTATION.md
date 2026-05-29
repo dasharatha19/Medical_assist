@@ -1,1263 +1,750 @@
-# 📖 Complete Codebase Documentation
+# MediBook — Technical Documentation
 
-**Project:** AI-Powered Medical Appointment Scheduling System  
-**Framework:** LangGraph + LangChain + Streamlit  
-**Date:** May 8, 2026 - Code Audit Completed  
-**Status:** 🟡 70% Complete - Core workflow functional, final integrations in progress
-
-### 📌 Quick Links for Different Needs:
-- **👉 START HERE (New Developer):** [PROJECT_STATUS.md](PROJECT_STATUS.md) - Handoff guide with what's done, what's left, and next steps
-- **📋 Setup Instructions:** [README.md](README.md) - Getting started in 5-20 minutes
-- **🏗️ Architecture Details:** [TECHNICAL_APPROACH_DOCUMENT.md](TECHNICAL_APPROACH_DOCUMENT.md) - Framework choices and design decisions
-- **📚 Deep Dive:** This file - Complete codebase reference
-
-> **TL;DR:** All core agents work. Patient lookup, scheduling, insurance, confirmation nodes are production-ready. Remaining: Email integration, form interface, demo video. See PROJECT_STATUS.md for next steps.
-
-This document provides an in-depth guide to understanding the entire codebase. Start with the section that matches your learning goal.
+**Version**: 2.0  
+**Last Updated**: May 2026  
+**Stack**: Python 3.11 · LangGraph · Groq LLM · PostgreSQL · Streamlit · Docker
 
 ---
 
-## 🎯 Quick Navigation
+## Table of Contents
 
-- [Project Overview](#project-overview) - What the system does
-- [Architecture](#architecture) - How it's structured
-- [Core Components](#core-components) - Deep dive into each module
-- [Data Flow](#data-flow) - How data moves through the system
-- [Workflow Guide](#workflow-guide) - Step-by-step appointment booking
-- [Configuration](#configuration) - Setup and environment
-- [API Reference](#api-reference) - Functions, classes, and services
-- [Extension Guide](#extension-guide) - How to add new features
-- [Debugging Guide](#debugging-guide) - Troubleshooting common issues
-
----
-
-## 📋 Project Overview
-
-### What Does It Do?
-
-This is an **AI-powered appointment scheduling system** for medical clinics. It:
-
-1. **Collects patient information** via conversational AI (name, DOB, contact, insurance)
-2. **Checks doctor availability** in real-time
-3. **Books appointments** into the doctor's schedule
-4. **Sends reminders** (48h, 24h, 1h before appointment)
-5. **Distributes forms** via email with unique patient links
-6. **Generates reports** in Excel for admin review
-
-### Key Capabilities
-
-| Capability | How It Works | Where It's Implemented |
-|-----------|-------------|------------------------|
-| **Conversational AI** | LangGraph nodes handle multi-turn conversation | `agents/nodes/*.py` |
-| **Doctor Availability** | Real-time slot checking from doctors.json | `services/scheduling_service.py` |
-| **Patient Verification** | Lookup existing patients or register new ones | `services/patient_service.py` |
-| **Insurance Validation** | Multi-field validation (carrier, ID, group) | `utils/validators.py` |
-| **Multi-Tier Reminders** | Automated scheduling (48h, 24h, 1h) | `services/reminder_service.py` |
-| **Email Distribution** | SMTP with retry logic (3 attempts) | `services/email_service.py` |
-| **Unique Form URLs** | UUID tokens for security | `services/form_distribution_service.py` |
-| **Excel Reports** | Multi-sheet workbook generation | `services/excel_exporter.py` |
-| **Web UI** | Streamlit-based chat interface | `app/main.py` |
-| **Session Persistence** | Conversations resume mid-workflow | `app/session_manager.py` |
+1. [System Architecture](#1-system-architecture)
+2. [LangGraph Pipeline](#2-langgraph-pipeline)
+3. [Node Reference](#3-node-reference)
+4. [State Management](#4-state-management)
+5. [Database Schema](#5-database-schema)
+6. [Services Layer](#6-services-layer)
+7. [Tools Layer](#7-tools-layer)
+8. [LLM Configuration](#8-llm-configuration)
+9. [UI Components](#9-ui-components)
+10. [Prompt System](#10-prompt-system)
+11. [Configuration Reference](#11-configuration-reference)
+12. [Deployment Guide](#12-deployment-guide)
+13. [Troubleshooting](#13-troubleshooting)
 
 ---
 
-## 🏗️ Architecture
-
-### High-Level System Design
+## 1. System Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        USER INTERFACE                             │
-│                    (Streamlit Web Chat UI)                        │
-│                      app/main.py                                  │
-└─────────────────────────────┬──────────────────────────────────────┘
-                              │
-                              ↓
-┌──────────────────────────────────────────────────────────────────┐
-│                    SESSION MANAGEMENT                             │
-│          (Thread ID, State Persistence, History)                 │
-│              app/session_manager.py                              │
-└─────────────────────────────┬──────────────────────────────────────┘
-                              │
-                              ↓
-┌──────────────────────────────────────────────────────────────────┐
-│                    LANGGRAPH WORKFLOW                             │
-│          (7 Orchestrated Nodes with State Management)            │
-│                      agents/graph.py                             │
-└──────────┬─────────────┬─────────────┬──────────────────────────┘
-           │             │             │
-    ┌──────▼────┐  ┌─────▼─────┐ ┌───▼──────────┐
-    │ Node 1-2  │  │ Node 3-4  │ │ Node 5-7     │
-    │ Greeting  │  │ Scheduling│ │ Confirmation,│
-    │ Lookup    │  │ Insurance │ │ Reminders,   │
-    │           │  │           │ │ Forms        │
-    └─────┬─────┘  └─────┬─────┘ └───┬──────────┘
-          │               │           │
-          └───────┬───────┴─────┬─────┘
-                  │             │
-         ┌────────▼──────┐ ┌────▼──────────┐
-         │ STATE OBJECT  │ │ TOOLS/SERVICES│
-         │(43 fields)    │ │(6 services)   │
-         │agents/state.py│ │services/      │
-         └────────┬──────┘ └────┬──────────┘
-                  │             │
-          ┌───────▼─────────────▼──────┐
-          │   DATA PERSISTENCE         │
-          │  (JSON files + Excel)      │
-          │  data/ files/              │
-          └────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        MEDIBOOK SYSTEM                          │
+│                                                                 │
+│  ┌──────────┐    ┌──────────────────────────────────────────┐  │
+│  │Streamlit │    │         LangGraph Agent Pipeline         │  │
+│  │   UI     │───▶│  conversation → booking → reminder →     │  │
+│  │main.py   │    │  form_distribution                       │  │
+│  └──────────┘    └──────────────────┬───────────────────────┘  │
+│                                     │                           │
+│  ┌──────────────────────────────────▼───────────────────────┐  │
+│  │                    Services Layer                        │  │
+│  │  patient_service · scheduling_service · reminder_service │  │
+│  │  form_distribution_service · email_service · report      │  │
+│  └──────────────────────────────────┬───────────────────────┘  │
+│                                     │                           │
+│  ┌──────────────────────────────────▼───────────────────────┐  │
+│  │                   PostgreSQL (Supabase)                  │  │
+│  │  patients · doctors · doctor_slots · appointments        │  │
+│  │  forms · reminders                                       │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Three-Layer Architecture
+### Key Design Decisions
 
-#### **Layer 1: Orchestration (Nodes)**
-- **Where:** `agents/nodes/*.py` (7 files)
-- **What:** Orchestrate conversation flow using LangGraph
-- **Each node:**
-  - Validates user input
-  - Calls appropriate service
-  - Updates state
-  - Routes to next node
-
-#### **Layer 2: Business Logic (Services)**
-- **Where:** `services/*.py` (6 files)
-- **What:** Implement business rules for each domain
-- **Services:**
-  - SchedulingService - Availability, booking
-  - PatientService - Lookup, registration
-  - ReminderService - 3-tier scheduling
-  - EmailService - SMTP delivery
-  - FormDistributionService - URL generation, tracking
-  - ReportService - Excel generation
-
-#### **Layer 3: Data Persistence**
-- **Where:** Root directory (JSON files)
-- **Files:**
-  - `patients.json` - Patient registry
-  - `doctors.json` - Doctor profiles, schedules
-  - `appointments.json` - Booked appointments
-  - `forms.json` - Form records with tokens
-  - `form_delivery_log.json` - Email delivery tracking
+- **No MemorySaver** — SessionManager holds single `agent_state` dict in memory
+- **PostgreSQL as source of truth** — No JSON files for data persistence
+- **Prompt injection** — System prompt built dynamically with current state at each turn
+- **LLM-first with rule-based fallback** — Gemini/Groq extracts fields; NLParser as fallback
 
 ---
 
-## 🧩 Core Components
+## 2. LangGraph Pipeline
 
-### 1. **LangGraph Workflow** (`agents/graph.py`)
-
-**Purpose:** Orchestrates the 7-node appointment scheduling workflow
-
-**Key Concept:** A `StateGraph` is a directed graph where:
-- Each node is a step in the conversation
-- State flows through nodes (gets updated at each step)
-- Conditional edges allow branching (retry, cancel, etc.)
-
-**The 7 Nodes:**
+### Graph Definition (`agents/graph.py`)
 
 ```python
-def create_scheduler_graph():
-    graph = StateGraph(SchedulerState)
-    
-    # 1. GREETING_NODE
-    graph.add_node("greeting", greeting_node)
-    
-    # 2. PATIENT_LOOKUP_NODE
-    graph.add_node("patient_lookup", patient_lookup_node)
-    
-    # 3. SCHEDULING_NODE
-    graph.add_node("scheduling", scheduling_node)
-    
-    # 4. INSURANCE_NODE
-    graph.add_node("insurance", insurance_node)
-    
-    # 5. CONFIRMATION_NODE
-    graph.add_node("confirmation", confirmation_node)
-    
-    # 6. REMINDER_NODE
-    graph.add_node("reminder", reminder_node)
-    
-    # 7. FORM_DISTRIBUTION_NODE
-    graph.add_node("form_distribution", form_distribution_node)
-    
-    # Set edges (greeting → patient_lookup → scheduling → ...)
-    graph.set_entry_point("greeting")
-    graph.add_edge("greeting", "patient_lookup")
-    graph.add_edge("patient_lookup", "scheduling")
-    # ... etc
-    
-    # Conditional edges for branching
-    graph.add_conditional_edges("scheduling", should_retry_scheduling, ...)
-    graph.add_conditional_edges("confirmation", should_confirm, ...)
-    
-    return graph.compile(checkpointer=MemorySaver())
+conversation_node → booking_node → reminder_node → form_distribution_node → END
 ```
 
-**Key Feature: MemorySaver Checkpointer**
-- Saves state after each node completes
-- Session resumes from last checkpoint (never restarts)
-- Enables multi-turn conversations that pause and resume
+### Routing Logic
+
+```
+After conversation_node:
+  if booking_confirmed == True → booking_node
+  else → END (wait for next user message)
+
+After booking_node:
+  if booking_success == True → reminder_node
+  else → END
+
+After reminder_node:
+  → form_distribution_node (always)
+
+After form_distribution_node:
+  → END
+```
+
+### Auto-Cascade
+
+`SessionManager.run_agent_step()` automatically runs all nodes in sequence when triggered. The entire pipeline from booking confirmation to form delivery happens in one call.
 
 ---
 
-### 2. **State Object** (`agents/state.py`)
+## 3. Node Reference
 
-**Purpose:** Central data structure flowing through all nodes (43 typed fields)
+### 3.1 conversation_node
 
-**Structure:**
+**File**: `agents/nodes/conversation_node.py`  
+**Purpose**: Primary AI chatbot — collects all patient information, checks availability, handles confirmation
+
+**Processing Steps:**
+1. Pre-resolve relative dates ("tomorrow" → "2026-05-30")
+2. Detect third-party booking ("my sister is sick")
+3. Load doctors from PostgreSQL
+4. Pre-match doctor names from user input
+5. Build dynamic system prompt with current state
+6. Call LLM (Groq/Gemini) → get JSON response
+7. Extract fields from LLM response
+8. Handle correction intent (user wants to change info)
+9. Handle cancellation intent
+10. Patient lookup (if name + DOB collected)
+11. Availability check (if doctor + date known)
+12. Validate selected time against real slots
+13. Check if all fields collected → set confirming phase
+14. Check if ready_to_book → set booking_confirmed
+
+**Key State Outputs:**
+```python
+state["patient_name"]         # Validated full name
+state["patient_dob"]          # YYYY-MM-DD format
+state["patient_phone"]        # 10-digit phone
+state["patient_email"]        # Valid email
+state["preferred_doctor"]     # Exact doctor name from DB
+state["appointment_date"]     # YYYY-MM-DD format
+state["selected_time"]        # HH:MM format (from available_slots)
+state["insurance_carrier"]    # Carrier name or "None"
+state["booking_confirmed"]    # True when user confirms
+state["available_slots"]      # List of available time strings
+state["patient_id"]           # DB patient ID
+state["patient_type"]         # "new" or "returning"
+state["appointment_duration"] # 60 (new) or 30 (returning)
+```
+
+**System Prompt Construction:**
+```python
+_build_system_prompt(state, doctors_info, slots_block)
+# Injects: collected fields, missing fields, available doctors,
+# available slots, patient status, scheduling rules
+```
+
+---
+
+### 3.2 booking_node
+
+**File**: `agents/nodes/booking_node.py`  
+**Purpose**: Reserves appointment slot and saves to database
+
+**Processing Steps:**
+1. Call `tools.booking.book()` → reserves slot via `DoctorAvailability`
+2. Generate appointment ID (UUID 8-char)
+3. Save appointment to PostgreSQL via `save_appointment(state)`
+4. Generate Excel admin report via `report_service`
+5. Set `current_step = "reminders"`
+
+**Key State Outputs:**
+```python
+state["appointment_id"]   # e.g. "APT7F3A2B"
+state["booking_success"]  # True
+state["db_saved"]         # True
+```
+
+**Double-Booking Prevention:**
+- `DoctorAvailability.book_slot()` checks overlap against existing appointments
+- Verifies slot status in `doctor_slots` table before marking as booked
+
+---
+
+### 3.3 reminder_node
+
+**File**: `agents/nodes/reminder_node.py`  
+**Purpose**: Sets up reminders and creates intake form
+
+**Processing Steps:**
+1. Generate appointment ID if missing
+2. Save appointment to PostgreSQL
+3. Generate Excel report
+4. Setup 3 reminders via `tools.reminder.setup()`
+5. Create intake form with unique UUID token
+6. Save form to PostgreSQL
+7. Mark form as sent
+
+**Reminder Schedule:**
+| Reminder | Type | Timing |
+|----------|------|--------|
+| R1 | Forms Check | 48 hours before |
+| R2 | General Reminder | 24 hours before |
+| R3 | Confirmation | 1 hour before |
+
+**Form Token:**
+```python
+form_token = str(uuid.uuid4())  # e.g. "a1b2c3d4-..."
+form_url = f"https://forms.medical-scheduler.com/patient-form/{form_token}"
+```
+
+---
+
+### 3.4 form_distribution_node
+
+**File**: `agents/nodes/form_distribution_node.py`  
+**Purpose**: Sends intake form to patient and tracks delivery
+
+**Processing Steps:**
+1. Verify booking was successful
+2. Determine patient type (new → comprehensive form, returning → update form)
+3. Initialize FormDistributionService
+4. Create form record if not exists
+5. Send form email via EmailService
+6. Track delivery status
+7. Set `workflow_complete = True`
+
+**Form Types:**
+- **New Patient**: Comprehensive Intake Form (8 fields including medical history)
+- **Returning Patient**: Patient Update Form (3 fields)
+
+---
+
+## 4. State Management
+
+### SchedulerState (`agents/state.py`)
+
+Complete state dictionary passed through all nodes:
 
 ```python
 class SchedulerState(TypedDict):
-    # ── Patient Information ──
+    # Patient Info
     patient_name: str
     patient_dob: str
-    patient_id: str
-    patient_type: str  # "new" or "returning"
-    appointment_duration: int  # minutes
-    patient_email: str
     patient_phone: str
-    
-    # ── Scheduling ──
+    patient_email: str
+    patient_id: str
+    patient_type: str           # "new" | "returning"
+    appointment_duration: int   # 60 | 30
+
+    # Appointment Info
     preferred_doctor: str
     appointment_date: str
-    available_slots: list
-    selected_slot: str
     selected_time: str
-    
-    # ── Insurance ──
+    available_slots: list
+    available_doctors: list
+
+    # Insurance
     insurance_carrier: str
     insurance_member_id: str
     insurance_group_id: str
-    insurance_valid: bool
-    
-    # ── Appointment Booking ──
-    appointment_id: str
+
+    # Booking Status
     booking_confirmed: bool
     booking_success: bool
-    
-    # ── Reminders & Forms ──
+    appointment_id: str
+    workflow_complete: bool
+    current_step: str
+
+    # Forms & Reminders
+    form_sent: bool
+    form_url: str
+    form_type: str
     reminders_setup: bool
     reminders_count: int
-    form_created: bool
-    form_sent: bool
-    form_token: str
-    form_url: str
-    
-    # ── Workflow Control ──
-    current_step: str
-    error_message: str
-    retry_count: int
-    workflow_complete: bool
+
+    # Conversation
     user_input: str
-    booking_confirmation_status: str  # "pending", "confirmed", "rejected"
-```
+    response: str
+    conversation_context: list  # [{role, content}, ...]
+    conversation_phase: str     # greeting|collecting|scheduling|insurance|confirming|done
+    intent: str
+    missing_fields: list
 
-**Usage Pattern:**
-```python
-def some_node(state: SchedulerState) -> SchedulerState:
-    # Read from state
-    name = state.get("patient_name")
-    
-    # Process (call service, validate, etc.)
-    result = some_service.process(name)
-    
-    # Update state
-    state["patient_name"] = result
-    state["current_step"] = "next_step"
-    
-    return state  # Flows to next node
+    # Third-party booking
+    booking_for_person: str
+    booking_for_someone_else_confirmed: bool
 ```
 
 ---
 
-### 3. **Nodes** (`agents/nodes/`)
+## 5. Database Schema
 
-Each node is a Python file implementing one step of the workflow. All nodes follow this pattern:
-
-```python
-def node_name(state: SchedulerState) -> SchedulerState:
-    """
-    Step X: Description
-    
-    Input from state: Which fields it reads
-    Output to state: Which fields it updates
-    Error handling: How it handles failures
-    Routing: Where it goes next (via state fields)
-    """
-    
-    # 1. Extract input from state
-    user_input = state.get("user_input")
-    
-    # 2. Validate input
-    if not user_input:
-        state["error_message"] = "Input required"
-        state["retry_count"] += 1
-        return state
-    
-    # 3. Call appropriate service
-    service = SomeService()
-    result = service.process(user_input)
-    
-    # 4. Update state
-    state["field_name"] = result
-    state["current_step"] = "next_step"
-    
-    # 5. Return (flows to next node)
-    return state
+### patients
+```sql
+CREATE TABLE patients (
+    patient_id        TEXT PRIMARY KEY,
+    first_name        TEXT,
+    last_name         TEXT,
+    full_name         TEXT,
+    dob               TEXT,
+    phone             TEXT,
+    email             TEXT,
+    insurance_carrier TEXT,
+    member_id         TEXT,
+    group_id          TEXT,
+    last_visit        TEXT,
+    patient_type      TEXT DEFAULT 'new'
+);
 ```
 
-**The 7 Nodes Explained:**
+### doctors
+```sql
+CREATE TABLE doctors (
+    doctor_id      TEXT PRIMARY KEY,
+    name           TEXT,
+    specialization TEXT,
+    location       TEXT,
+    working_hours  TEXT,    -- "09:00 - 17:00"
+    break_time     TEXT,    -- "12:00 - 13:00"
+    conditions     TEXT     -- comma-separated conditions treated
+);
+```
 
-| Node | Purpose | Key Actions | Conditional Exit |
-|------|---------|-----------|-----------------|
-| **greeting_node** | Welcome, explain workflow | Print welcome message | Always → patient_lookup |
-| **patient_lookup_node** | Collect patient info | Name, DOB, email, phone lookup | Always → scheduling |
-| **scheduling_node** | Book appointment slot | List doctors, show slots, reserve | Retry up to 3x if no slots |
-| **insurance_node** | Collect insurance details | Carrier, member ID, group ID | Always → confirmation |
-| **confirmation_node** | Review & confirm | Display summary, ask Y/N | Y → reminder, N → END |
-| **reminder_node** | Create appointment, setup reminders | Book appointment, schedule 3 reminders | Always → form_distribution |
-| **form_distribution_node** | Send forms to patient | Generate UUID URL, send email | Always → END |
+### doctor_slots
+```sql
+CREATE TABLE doctor_slots (
+    id          SERIAL PRIMARY KEY,
+    doctor_id   TEXT REFERENCES doctors(doctor_id),
+    date        TEXT,       -- "YYYY-MM-DD"
+    time_slot   TEXT,       -- "HH:MM"
+    status      TEXT DEFAULT 'available'  -- available|booked|break
+);
+```
+
+### appointments
+```sql
+CREATE TABLE appointments (
+    appointment_id      TEXT PRIMARY KEY,
+    patient_id          TEXT,
+    patient_name        TEXT,
+    patient_dob         TEXT,
+    patient_email       TEXT,
+    patient_phone       TEXT,
+    doctor_name         TEXT,
+    appointment_date    TEXT,
+    appointment_time    TEXT,
+    duration_minutes    INTEGER,
+    patient_type        TEXT,
+    insurance_carrier   TEXT,
+    insurance_member_id TEXT,
+    insurance_group_id  TEXT,
+    booking_confirmed   BOOLEAN DEFAULT FALSE,
+    booking_success     BOOLEAN DEFAULT FALSE,
+    reminders_setup     BOOLEAN DEFAULT FALSE,
+    form_sent           BOOLEAN DEFAULT FALSE,
+    status              TEXT DEFAULT 'pending',
+    created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### forms
+```sql
+CREATE TABLE forms (
+    form_id           TEXT PRIMARY KEY,
+    appointment_id    TEXT,
+    patient_id        TEXT,
+    patient_name      TEXT,
+    patient_email     TEXT,
+    doctor            TEXT,
+    appointment_date  TEXT,
+    form_type         TEXT,
+    form_token        TEXT,
+    form_url          TEXT,
+    is_new_patient    BOOLEAN DEFAULT TRUE,
+    sent              BOOLEAN DEFAULT FALSE,
+    sent_at           TIMESTAMP,
+    completed         BOOLEAN DEFAULT FALSE,
+    completed_at      TIMESTAMP,
+    delivery_attempts INTEGER DEFAULT 0,
+    created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### reminders
+```sql
+CREATE TABLE reminders (
+    reminder_id      TEXT PRIMARY KEY,
+    appointment_id   TEXT,
+    patient_email    TEXT,
+    patient_phone    TEXT,
+    reminder_type    TEXT,   -- "Forms Check"|"General Reminder"|"Confirmation"
+    scheduled_time   TIMESTAMP,
+    sent             BOOLEAN DEFAULT FALSE,
+    sent_at          TIMESTAMP,
+    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Auto-Initialization
+
+On app startup, `initialize_database()` in `database/db.py`:
+1. Creates database if not exists
+2. Creates all tables if not exists
+3. Runs `migrate_add_conditions()` — adds conditions column
+4. Seeds patients from `data/patients.csv`
+5. Seeds doctors from `data/doctor_schedules.xlsx`
 
 ---
 
-### 4. **Services** (`services/`)
+## 6. Services Layer
 
-Each service implements business logic for one domain. Services are **called by nodes** and **return results** (no direct state manipulation).
-
-#### **SchedulingService** (`scheduling_service.py`)
+### patient_service.py
 ```python
-class SchedulingService:
-    def get_available_doctors(self) -> list:
-        """Returns list of doctor objects from doctors.json"""
-    
-    def check_doctor_availability(self, doctor_id: str, date: str) -> list:
-        """Returns available 30-min time slots for a doctor on a date"""
-    
-    def reserve_slot(self, doctor_id: str, patient_id: str, date: str, time: str) -> str:
-        """Reserves a slot, returns appointment_id"""
-    
-    def get_doctor_by_name(self, name: str):
-        """Lookup doctor by name"""
+lookup_patient(name, dob)          # Find patient in PostgreSQL
+register_new_patient(data)          # Create new patient record
+update_patient_preferences(...)     # Update doctor/location preference
+record_appointment(patient_id, ...) # Update last_visit, set type=returning
 ```
 
-#### **PatientService** (`patient_service.py`)
+### scheduling_service.py
 ```python
-class PatientService:
-    def lookup_patient(self, name: str, dob: str) -> dict or None:
-        """Returns patient record if exists, else None"""
-    
-    def register_patient(self, name: str, dob: str, email: str, phone: str) -> str:
-        """Creates new patient, returns patient_id"""
-    
-    def is_new_patient(self, patient_id: str) -> bool:
-        """True if patient has no previous appointments"""
+get_available_doctors()             # Returns list of doctor dicts with conditions
+check_doctor_availability(doctor, date, duration)  # Returns available slots
+reserve_slot(doctor, date, time, patient_id, duration)  # Book slot
 ```
 
-#### **ReminderService** (`reminder_service.py`)
+### reminder_service.py
 ```python
-class ReminderService:
-    def setup_appointment_reminders(self, appointment: dict) -> bool:
-        """
-        Creates 3 reminders:
-        - 48h before: Form completion check
-        - 24h before: General appointment reminder
-        - 1h before: Confirmation check
-        """
-    
-    def check_form_completion(self, appointment_id: str) -> bool:
-        """Returns True if patient completed form"""
-    
-    def send_reminder(self, recipient_email: str, reminder_text: str) -> bool:
-        """Sends reminder email via EmailService"""
+setup_appointment_reminders(appointment_id, datetime, email, phone)
+# Creates 3 reminder records: 48h, 24h, 1h before appointment
+
+get_appointment_reminders(appointment_id)  # Fetch reminders from DB
+mark_reminder_sent(appointment_id, reminder_id)  # Update sent status
+check_form_completion(appointment_id)  # Check if patient completed form
 ```
 
-#### **EmailService** (`email_service.py`)
+### form_distribution_service.py
 ```python
-class EmailService:
-    def send_email(self, to: str, subject: str, body: str, 
-                   html: str = None, attachments: list = None) -> bool:
-        """
-        Sends email via SMTP with retry logic:
-        - Attempt 1: Immediate
-        - Attempt 2: After 5 seconds
-        - Attempt 3: After 10 seconds
-        Returns True if sent successfully
-        """
+create_form_for_appointment(...)    # Generate form with unique token
+send_form_email(appointment_id, email, name)  # Send via EmailService
+mark_form_completed(appointment_id) # Track completion
+get_form_status(appointment_id)     # Get current form status
+get_pending_form_reminders()        # Forms sent but not completed
 ```
 
-#### **FormDistributionService** (`form_distribution_service.py`)
+### report_service.py
 ```python
-class FormDistributionService:
-    def create_form_for_appointment(self, appointment: dict, patient_type: str) -> dict:
-        """
-        Generates unique form record:
-        - Creates UUID token
-        - Builds form URL: https://clinic.com/forms/{UUID}
-        - Returns form object with metadata
-        """
-    
-    def send_form_to_patient(self, patient_email: str, form: dict) -> bool:
-        """Sends form URL via EmailService with retry"""
-    
-    def check_form_completion(self, form_token: str) -> bool:
-        """Returns True if form was completed"""
-```
-
-#### **ReportService** (`report_service.py`)
-```python
-class ReportService:
-    def generate_appointment_report(self, appointment_data: dict) -> str:
-        """
-        Generates Excel workbook with:
-        - Appointment details
-        - Patient information
-        - Insurance information
-        - Reminders scheduled
-        Returns path to saved Excel file
-        """
-```
-
----
-
-### 5. **Utilities** (`utils/`)
-
-#### **Validators** (`validators.py`)
-```python
-class PatientDataValidator:
-    @staticmethod
-    def validate_name(name: str) -> tuple[bool, str]:
-        """Returns (is_valid, cleaned_name)"""
-    
-    @staticmethod
-    def validate_dob(dob: str) -> tuple[bool, datetime]:
-        """Returns (is_valid, parsed_date)"""
-
-class ContactValidator:
-    @staticmethod
-    def validate_email(email: str) -> bool
-    @staticmethod
-    def validate_phone(phone: str) -> bool
-
-class InsuranceValidator:
-    @staticmethod
-    def validate_carrier(carrier: str) -> bool
-    @staticmethod
-    def validate_member_id(member_id: str) -> bool
-```
-
-#### **LLM Service** (`llm_service.py`)
-```python
-class LLMService:
-    def __init__(self):
-        """Initializes Google Gemini API with fallback to rule-based parser"""
-    
-    def extract_patient_info(self, user_input: str) -> dict:
-        """
-        Uses Gemini to extract:
-        - Name, DOB, email, phone, doctor preference, insurance
-        Fallback: Rule-based parser if Gemini unavailable
-        """
-```
-
-#### **Config** (`config.py`)
-```python
-# Centralized configuration
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-LLM_ENABLED = os.getenv("LLM_ENABLED", "true").lower() == "true"
-REQUIRE_LLM = os.getenv("REQUIRE_LLM", "false").lower() == "true"
-
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
-SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
-
-EMAIL_MAX_RETRIES = int(os.getenv("EMAIL_MAX_RETRIES", "3"))
-EMAIL_RETRY_DELAY = int(os.getenv("EMAIL_RETRY_DELAY", "5"))
-```
-
-#### **Prompt Loader** (`prompt_loader.py`)
-```python
-def get_section_safe(prompt_file: str, section: str, default: str = "") -> str:
-    """
-    Loads prompt from prompts/{prompt_file}.txt
-    Extracts section between markers: # ── SECTION ──
-    Falls back to default if not found
-    """
+record_appointment(state)           # Append to Excel admin report
 ```
 
 ---
 
-### 6. **Web UI** (`app/`)
+## 7. Tools Layer
 
-#### **Main App** (`main.py`)
-```python
-# Streamlit web interface
-st.set_page_config(page_title="MediBook", layout="centered")
+Tools are thin wrappers around services, providing the LangChain tool interface:
 
-if "session_manager" not in st.session_state:
-    st.session_state.session_manager = SessionManager()
-
-# Conversation loop
-if user_input := st.chat_input("You:"):
-    # 1. Invoke graph with current state
-    result = st.session_state.session_manager.invoke(user_input)
-    
-    # 2. Display agent response
-    st.chat_message("assistant").write(result["output"])
-    
-    # 3. State persists via MemorySaver
+```
+tools/patient_lookup_tool.py  → patient_service.lookup_patient()
+tools/schedule_checker_tool.py → scheduling_service.get_available_doctors()
+                               → scheduling_service.check_doctor_availability()
+tools/booking_tool.py         → scheduling_service.reserve_slot()
+                               → patient_service.record_appointment()
+tools/reminder_tool.py        → reminder_service.setup_appointment_reminders()
+tools/notification_tool.py    → PostgreSQL direct (insurance + forms)
 ```
 
-#### **Session Manager** (`session_manager.py`)
+### Tool Registry (`tools/__init__.py`)
 ```python
-class SessionManager:
-    def __init__(self):
-        """Initialize with unique thread_id for this user"""
-        self.thread_id = str(uuid.uuid4())  # Unique per browser session
-        self.graph = create_scheduler_graph()  # LangGraph workflow
-    
-    def invoke(self, user_input: str) -> dict:
-        """
-        1. Sets user_input in state
-        2. Executes graph from last checkpoint
-        3. Returns output for display
-        Workflow RESUMES from last step (never restarts)
-        """
-        state = {"user_input": user_input}
-        result = self.graph.invoke(
-            state,
-            config={"configurable": {"thread_id": self.thread_id}}
-        )
-        return result
+tools.patient_lookup    # PatientLookupTool instance
+tools.schedule_checker  # ScheduleCheckerTool instance
+tools.booking           # BookingTool instance
+tools.reminder          # ReminderTool instance
+tools.notification      # NotificationTool instance
 ```
 
 ---
 
-### 7. **Tools** (`tools/`)
+## 8. LLM Configuration
 
-Tools are wrappers around services for LLM integration. Each tool:
-- Takes input parameters
-- Calls underlying service
-- Returns structured result
+### Provider Priority (`utils/config.py`)
+
+```
+1. Groq      → llama-3.3-70b-versatile  (fastest, recommended)
+2. Gemini    → gemini-1.5-flash          (free tier)
+3. OpenAI    → gpt-4o-mini               (fallback)
+4. Anthropic → claude-3-5-haiku          (final fallback)
+```
+
+### LLM Client (`utils/llm_client.py`)
 
 ```python
-# booking_tool.py
-@tool
-def booking_tool(doctor_id: str, date: str, time: str, patient_id: str) -> str:
-    """Books an appointment slot"""
-    service = SchedulingService()
-    appointment_id = service.reserve_slot(doctor_id, patient_id, date, time)
-    return f"Appointment {appointment_id} booked"
+llm = get_llm_client()
+result = llm.chat_json(prompt=prompt, system=system)
+# Returns: {"intent": ..., "extracted": {...}, "response": ..., "phase": ..., "ready_to_book": bool}
 ```
 
----
+### LLM Response Format
 
-### 8. **Prompts** (`prompts/`)
-
-Centralized LLM prompts stored as text files:
-- `system_prompt.txt` - System instructions for LLM
-- `extraction_prompt.txt` - Extract patient info from input
-- `scheduling_prompt.txt` - Help schedule appointments
-- `insurance_prompt.txt` - Insurance info extraction
-- `confirmation_prompt.txt` - Confirmation message template
-- `reminder_prompt.txt` - Reminder email template
-
-**Usage:**
-```python
-prompt_text = get_section_safe("extraction_prompt", "PATIENT_NAME")
-```
-
----
-
-## 🔄 Data Flow
-
-### Complete Request Lifecycle
-
-```
-1. USER INPUT
-   └─→ "I'd like to book an appointment with Dr. Smith on Monday at 2 PM"
-
-2. STREAMLIT UI (app/main.py)
-   └─→ Captures input, passes to SessionManager
-
-3. SESSION MANAGER (app/session_manager.py)
-   └─→ Sets state["user_input"]
-   └─→ Calls graph.invoke() with thread_id
-
-4. LANGGRAPH WORKFLOW (agents/graph.py)
-   └─→ Resumes from last checkpoint via MemorySaver
-   └─→ Executes next node
-
-5. CURRENT NODE (agents/nodes/*.py)
-   └─→ Reads from state["user_input"]
-   └─→ Validates input
-   └─→ Calls appropriate service
-
-6. SERVICE LAYER (services/*.py)
-   └─→ SchedulingService.get_available_doctors()
-   └─→ SchedulingService.check_doctor_availability()
-   └─→ Returns structured result
-
-7. DATA PERSISTENCE (JSON files)
-   └─→ Reads doctors.json (doctor profiles)
-   └─→ Checks appointments.json (existing bookings)
-   └─→ Creates entry in appointments.json (new booking)
-
-8. STATE UPDATE (agents/state.py)
-   └─→ Node updates state with:
-   ├─ appointment_id: str
-   ├─ appointment_date: str
-   ├─ selected_time: str
-   ├─ booking_confirmed: bool
-   └─ current_step: "next_step"
-
-9. ROUTING (agents/graph.py)
-   └─→ Graph evaluates conditional edges
-   └─→ Routes to next node (usually "insurance")
-
-10. CHECKPOINT (MemorySaver)
-    └─→ Saves state snapshot
-    └─→ Session can resume here on next user input
-
-11. OUTPUT TO UI (app/main.py)
-    └─→ Formats state for display
-    └─→ Shows to user: "Great! Appointment booked for Monday at 2 PM"
-
-12. BACKGROUND PROCESSES
-    └─→ ReminderService creates scheduled reminders
-    └─→ EmailService queues emails
-    └─→ FormDistributionService generates form URL
-    └─→ ReportService creates Excel report
-```
-
----
-
-## 📅 Workflow Guide
-
-### Complete Appointment Booking Flow
-
-```
-START
-  ↓
-┌─────────────────────────────────────┐
-│ 1. GREETING NODE                    │
-│ Output: "Welcome to MediBook"       │
-└────────────┬────────────────────────┘
-             ↓
-┌─────────────────────────────────────┐
-│ 2. PATIENT LOOKUP NODE              │
-│ Collect: Name, DOB, Email, Phone    │
-│ Action: Lookup in patients.json     │
-│ Output: "Hi [Name], new/returning"  │
-└────────────┬────────────────────────┘
-             ↓
-┌─────────────────────────────────────┐
-│ 3. SCHEDULING NODE                  │
-│ Collect: Doctor, Date, Time         │
-│ Action: Check availability          │
-│ Output: "Here are available slots"  │
-│ Retry: Up to 3x if no slots         │
-└────────────┬────────────────────────┘
-             ↓
-┌─────────────────────────────────────┐
-│ 4. INSURANCE NODE                   │
-│ Collect: Carrier, Member ID, etc.   │
-│ Action: Validate insurance details  │
-│ Output: "Insurance recorded"        │
-└────────────┬────────────────────────┘
-             ↓
-┌─────────────────────────────────────┐
-│ 5. CONFIRMATION NODE                │
-│ Display: Full appointment summary   │
-│ Ask: "Confirm? (Yes/No)"            │
-│ Routes:                             │
-│   Yes → Proceed to reminder_node    │
-│   No  → END (Cancelled)             │
-└────────────┬────────────────────────┘
-             ↓
-       [User confirms: YES]
-             ↓
-┌─────────────────────────────────────┐
-│ 6. REMINDER NODE                    │
-│ Action: Create appointment record   │
-│ Action: Setup 3 reminders (48h/24h/1h)
-│ Action: Generate Excel report       │
-│ Output: "Appointment confirmed!"    │
-└────────────┬────────────────────────┘
-             ↓
-┌─────────────────────────────────────┐
-│ 7. FORM DISTRIBUTION NODE           │
-│ Action: Generate UUID form token    │
-│ Action: Create form URL             │
-│ Action: Send form via email         │
-│ Output: "Form sent to your email"   │
-└────────────┬────────────────────────┘
-             ↓
-           END
-             ↓
-    [BACKGROUND PROCESSES]
-    • Reminders scheduled (check every minute)
-    • Forms tracked (check completion)
-    • Excel reports generated (in files/)
-```
-
-### State Transitions Example
-
-**After User Says:** "I'd like to book with Dr. Smith, I'm John Doe, DOB 05/15/1990"
-
-```
-Initial State:
+```json
 {
-  "user_input": "I'd like to book with Dr. Smith, I'm John Doe, DOB 05/15/1990",
-  "current_step": "patient_lookup",
-  ...
+    "intent": "general_question|book_appointment|provide_info|confirm|cancel|correct_info",
+    "extracted": {
+        "patient_name": null,
+        "patient_dob": null,
+        "patient_phone": null,
+        "patient_email": null,
+        "preferred_doctor": null,
+        "appointment_date": null,
+        "selected_time": null,
+        "insurance_carrier": null,
+        "insurance_member_id": null,
+        "insurance_group_id": null,
+        "has_insurance": null
+    },
+    "response": "Natural language response to patient",
+    "phase": "greeting|collecting|scheduling|insurance|confirming|done",
+    "ready_to_book": false
 }
-        ↓ patient_lookup_node processes
-        ↓ PatientService.lookup_patient("John Doe", "05/15/1990")
-        ↓ Found existing patient
-Updated State:
-{
-  "user_input": "",  # Cleared
-  "patient_name": "John Doe",
-  "patient_dob": "05/15/1990",
-  "patient_id": "P12345",
-  "patient_type": "returning",  # Had previous appointment
-  "appointment_duration": 30,  # Returning: 30 min
-  "current_step": "scheduling",
-  "error_message": "",  # No errors
-  ...
-}
-        ↓ Graph routes to scheduling_node
-        ↓ SchedulingService checks availability
-        ↓ Found 3 slots on requested date
-Updated State:
-{
-  "available_slots": ["14:00", "14:30", "15:00"],
-  "current_step": "insurance",
-  "preferred_doctor": "Dr. Smith",
-  ...
-}
-        ↓ Graph routes to insurance_node
-        ↓ Continues until confirmation
-        ↓ User confirms: YES
-Updated State:
-{
-  "booking_confirmed": true,
-  "appointment_id": "APT20260421001",
-  "booking_confirmation_status": "confirmed",
-  ...
-}
-        ↓ Graph routes to reminder_node
-        ↓ Creates 3 scheduled reminders
-        ↓ Generates Excel report
-        ↓ Routes to form_distribution_node
-Updated State:
-{
-  "reminders_setup": true,
-  "reminders_count": 3,
-  "form_token": "a1b2c3d4-e5f6-...",
-  "form_url": "https://clinic.com/forms/a1b2c3d4-e5f6-...",
-  "form_sent": true,
-  "workflow_complete": true,
-  ...
-}
-        ↓ State checkpoint saved
-        ↓ Session resumes here on next user input
+```
+
+### Configuration Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| Temperature | 0.3 | Deterministic responses |
+| Max tokens | 1000 | Response length limit |
+| Timeout | 30s | API call timeout |
+| Fallback | Rule-based NLP | When LLM fails |
+
+---
+
+## 9. UI Components
+
+### Layout (`app/main.py`)
+
+```
+┌─────────────┬─────────────────────────┬──────────────┐
+│  Left Panel │    Center (Chat)        │ Right Panel  │
+│  (Sidebar)  │                         │              │
+│             │  ┌───────────────────┐  │ Progress     │
+│ Past Appts  │  │  Chat History     │  │ Steps 1-6    │
+│             │  │                   │  │              │
+│ New Conv    │  │  Bot messages     │  │ Booking      │
+│             │  │  User messages    │  │ Summary      │
+│             │  └───────────────────┘  │              │
+│             │  ─────────────────────  │ Patient      │
+│             │  Quick Reply Buttons    │ Doctor       │
+│             │  ─────────────────────  │ Date         │
+│             │  Your Response Input    │ Time         │
+│             │                         │ Insurance    │
+└─────────────┴─────────────────────────┴──────────────┘
+```
+
+### Quick Reply Components
+
+| Component | Trigger | Options Shown |
+|-----------|---------|---------------|
+| Doctor buttons | Bot asks about doctor | All available doctors |
+| Date buttons | Bot asks about date | 3 next weekdays |
+| Slot buttons | Bot shows availability | All available slots (4-col grid) |
+| Yes/No buttons | Bot asks to confirm | Yes / No |
+| DOB picker | Bot asks for DOB | Calendar date picker |
+| Change appointment card | User wants to modify | Step 1: Date, Step 2: Doctor |
+
+### Progress Panel
+
+Shows 6 steps with visual indicators:
+1. Your Name
+2. Patient Check
+3. Pick a Date
+4. Insurance
+5. Confirm
+6. Done!
+
+---
+
+## 10. Prompt System
+
+### Files in `prompts/`
+
+| File | Purpose |
+|------|---------|
+| `system_prompt.txt` | Core personality, rules, policies |
+| `scheduling_prompt.txt` | Slot selection and date handling rules |
+| `confirmation_prompt.txt` | Confirmation flow instructions |
+| `insurance_prompt.txt` | Insurance collection rules |
+| `reminder_prompt.txt` | Reminder message templates |
+| `extraction_prompt.txt` | Field extraction instructions |
+
+### Dynamic Prompt Injection
+
+At each turn, `_build_system_prompt()` injects:
+
+```
+ALREADY COLLECTED (never ask again):
+  ✅ full name: John
+  ✅ date of birth: 1990-03-15
+
+STILL NEEDED (ask one at a time):
+  ❓ phone number
+  ❓ insurance
+
+AVAILABLE DOCTORS:
+  - Dr. John Smith (General Practice) at Downtown Clinic | Hours: 09:00-17:00
+  - Dr. Sarah Johnson (Cardiology) at Westside Medical Center | Hours: 08:00-16:00
+
+AVAILABLE SLOTS for Dr. John Smith on 2026-05-30:
+  1. 09:00  2. 09:30  3. 10:00 ...
+```
+
+### Key Prompt Policies
+
+- **PRIORITY RULE**: Answer availability questions before collecting info
+- **MEMORY RULE**: ALREADY COLLECTED is source of truth — never re-ask
+- **CANCELLATION POLICY**: Save info, acknowledge warmly
+- **CORRECTION POLICY**: intent=correct_info, never cancel
+- **SYMPTOM MATCHING**: Route to closest doctor specialty
+- **DOCTOR SUGGESTION**: Suggest, never assign without confirmation
+- **BOOKING FOR SOMEONE ELSE**: Ask confirmation, collect their info
+
+---
+
+## 11. Configuration Reference
+
+### `utils/config.py`
+
+```python
+Config.LLM_PROVIDER         # "groq"|"gemini"|"openai"|"anthropic"|"auto"
+Config.LLM_MODEL            # Model name for active provider
+Config.USE_LLM_FOR_PARSING  # True = use LLM; False = rule-based only
+Config.FALLBACK_TO_RULE_BASED  # True = fallback on LLM failure
+Config.get_active_provider() # Returns currently active provider
+Config.get_active_model()    # Returns currently active model
+Config.is_llm_enabled()      # True if LLM is configured and enabled
+```
+
+### `database/db.py`
+
+```python
+initialize_database()         # Run once on startup
+get_connection()              # Returns psycopg2 connection
+lookup_patient(name, dob)     # Returns patient dict or None
+register_new_patient(data)    # Returns new patient_id
+get_all_doctors()             # Returns list of doctor dicts
+get_available_slots(doctor, date)  # Returns list of time strings
+book_slot(doctor, date, time)  # Returns True/False
+save_appointment(state)        # Returns appointment_id
+save_form(form_data)           # Returns True
+save_reminders(appointment_id, email, phone, reminders)  # Returns True
 ```
 
 ---
 
-## ⚙️ Configuration
+## 12. Deployment Guide
 
-### Environment Variables
-
-Create a `.env` file in the project root with:
+### Docker Build & Run
 
 ```bash
-# Google Gemini LLM (Optional - can run without)
-GEMINI_API_KEY=your_gemini_api_key
-LLM_ENABLED=true          # Set to false to disable Gemini
-REQUIRE_LLM=false         # If true, app fails without Gemini
+# Build
+docker build --no-cache -t medibook .
 
-# Email Configuration
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SENDER_EMAIL=your_clinic_email@gmail.com
-SENDER_PASSWORD=your_app_password  # Gmail: use app password, not account password
-SMTP_USE_TLS=true
+# Run locally
+docker run -p 8501:8501 --env-file .env --dns 8.8.8.8 medibook
 
-# Email Retry Settings
-EMAIL_MAX_RETRIES=3       # Retry failed emails 3 times
-EMAIL_RETRY_DELAY=5       # Start with 5-second delay, exponential backoff
-
-# Feature Flags
-TEST_MODE=false           # If true, emails not actually sent
+# Access at http://localhost:8501
 ```
 
-### JSON Data Files
+### Render.com Deployment
 
-#### `doctors.json`
-```json
-[
-  {
-    "id": "DOC001",
-    "name": "Dr. Smith",
-    "specialization": "General Practice",
-    "location": "Downtown Clinic",
-    "working_hours": "09:00-17:00",
-    "break_times": [{"start": "12:00", "end": "13:00"}],
-    "appointments": []  # Will be populated with booked appointments
-  }
-]
+1. Push code to GitHub
+2. In Render dashboard → New Web Service → Connect GitHub repo
+3. Set environment variables (never commit real keys):
+   - `GROQ_API_KEY`
+   - `DATABASE_URL` (Supabase pooler URL)
+   - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+   - `LLM_ENABLED=true`
+   - `LLM_PROVIDER=groq`
+4. Render auto-deploys on every push to main branch
+
+### Supabase PostgreSQL Setup
+
+Use Session Pooler for IPv4 compatibility:
+```
+Host: aws-1-ap-northeast-1.pooler.supabase.com
+Port: 5432
+User: postgres.[project-ref]
+DB:   postgres
 ```
 
-#### `patients.json`
-```json
-[
-  {
-    "id": "P12345",
-    "name": "John Doe",
-    "dob": "1990-05-15",
-    "email": "john@example.com",
-    "phone": "555-0123",
-    "appointments": ["APT001", "APT002"]
-  }
-]
-```
+Tables are auto-created on first app startup.
 
-#### `appointments.json`
-```json
-[
-  {
-    "id": "APT001",
-    "patient_id": "P12345",
-    "doctor_id": "DOC001",
-    "date": "2026-04-25",
-    "time": "14:00",
-    "duration": 30,
-    "status": "confirmed"
-  }
-]
-```
+---
 
-#### `forms.json`
-```json
-[
-  {
-    "id": "F001",
-    "appointment_id": "APT001",
-    "patient_id": "P12345",
-    "form_type": "new_patient",
-    "token": "a1b2c3d4-e5f6-...",
-    "url": "https://clinic.com/forms/a1b2c3d4-e5f6-...",
-    "status": "sent",
-    "sent_at": "2026-04-21T10:30:00"
-  }
-]
+## 13. Troubleshooting
+
+### App won't start
+
+```
+SyntaxError: f-string unmatched '('
+```
+**Fix**: Use single quotes inside f-strings: `f"{state.get('key')}"` not `f"{state.get("key")}"`
+
+---
+
+```
+ModuleNotFoundError: No module named 'form_manager'
+```
+**Fix**: `form_manager.py` was deleted. Check `tools/notification_tool.py` imports.
+
+---
+
+### Database connection fails
+
+```
+could not translate host name "db.xxx.supabase.co"
+```
+**Fix**: Use Session Pooler URL (IPv4) not Direct Connection (IPv6):
+```
+aws-1-ap-northeast-1.pooler.supabase.com:5432
 ```
 
 ---
 
-## 📡 API Reference
-
-### Key Functions by Module
-
-#### `agents/graph.py`
-```python
-def create_scheduler_graph() -> CompiledGraph:
-    """Creates and compiles the 7-node workflow with MemorySaver"""
-
-def get_graph() -> CompiledGraph:
-    """Returns the compiled graph (creates if needed)"""
 ```
-
-#### `services/scheduling_service.py`
-```python
-class SchedulingService:
-    def get_available_doctors(self) -> List[Dict]:
-    def check_doctor_availability(self, doctor_id: str, date: str) -> List[str]:
-    def reserve_slot(self, doctor_id: str, patient_id: str, date: str, time: str) -> str:
-    def get_doctor_by_name(self, name: str) -> Dict or None:
+Network is unreachable (IPv6 address)
 ```
+**Fix**: Same as above — use pooler URL.
 
-#### `services/patient_service.py`
-```python
-class PatientService:
-    def lookup_patient(self, name: str, dob: str) -> Dict or None:
-    def register_patient(self, name: str, dob: str, email: str, phone: str) -> str:
-    def is_new_patient(self, patient_id: str) -> bool:
-```
+---
 
-#### `services/reminder_service.py`
-```python
-class ReminderService:
-    def setup_appointment_reminders(self, appointment: Dict) -> bool:
-    def check_form_completion(self, appointment_id: str) -> bool:
-    def send_reminder(self, recipient_email: str, reminder_text: str) -> bool:
-```
+### No slots available
 
-#### `services/email_service.py`
-```python
-class EmailService:
-    def send_email(self, to: str, subject: str, body: str, 
-                   html: str = None, attachments: List[str] = None) -> bool:
-```
-
-#### `services/form_distribution_service.py`
-```python
-class FormDistributionService:
-    def create_form_for_appointment(self, appointment: Dict, patient_type: str) -> Dict:
-    def send_form_to_patient(self, patient_email: str, form: Dict) -> bool:
-    def check_form_completion(self, form_token: str) -> bool:
-```
-
-#### `app/session_manager.py`
-```python
-class SessionManager:
-    def __init__(self):
-    def invoke(self, user_input: str) -> Dict:
+**Cause**: `doctor_slots` table only has past dates.  
+**Fix**: Run the slot generation SQL in Supabase SQL Editor:
+```sql
+INSERT INTO doctor_slots (doctor_id, date, time_slot, status)
+SELECT 'DR_Dr_Sarah_Johnson', date_val::text, time_val, 'available'
+FROM generate_series('2026-05-29'::date, '2026-07-31'::date, '1 day'::interval) AS date_val,
+     unnest(ARRAY['08:00','08:30','09:00'...]) AS time_val
+WHERE EXTRACT(DOW FROM date_val) BETWEEN 1 AND 5;
 ```
 
 ---
 
-## 🔧 Extension Guide
+### LLM not responding
 
-### Adding a New Node
-
-1. **Create file:** `agents/nodes/new_node.py`
-   ```python
-   from agents.state import SchedulerState
-   
-   def new_node(state: SchedulerState) -> SchedulerState:
-       """Step X: Description"""
-       # Read from state
-       user_input = state.get("user_input")
-       
-       # Process
-       result = some_service.process(user_input)
-       
-       # Update state
-       state["field_name"] = result
-       
-       return state
-   ```
-
-2. **Register in graph:** `agents/graph.py`
-   ```python
-   from agents.nodes.new_node import new_node
-   
-   graph.add_node("new_node", new_node)
-   graph.add_edge("previous_node", "new_node")
-   ```
-
-3. **Update state:** `agents/state.py`
-   ```python
-   class SchedulerState(TypedDict):
-       # Add new fields
-       new_field_name: str
-   ```
-
-### Adding a New Service
-
-1. **Create file:** `services/new_service.py`
-   ```python
-   class NewService:
-       def __init__(self):
-           self.data_file = "new_data.json"
-       
-       def process(self, input_data: str) -> Any:
-           # Business logic here
-           pass
-   ```
-
-2. **Use in node:** `agents/nodes/some_node.py`
-   ```python
-   from services.new_service import NewService
-   
-   def some_node(state: SchedulerState) -> SchedulerState:
-       service = NewService()
-       result = service.process(state.get("input"))
-       state["output"] = result
-       return state
-   ```
-
-### Adding a New Reminder Type
-
-1. **Update config:** `utils/config.py`
-   ```python
-   REMINDER_TIERS = [
-       {"hours_before": 48, "type": "form_check"},
-       {"hours_before": 24, "type": "general"},
-       {"hours_before": 1, "type": "confirmation"},
-       {"hours_before": 0.5, "type": "new_type"}  # New
-   ]
-   ```
-
-2. **Update template:** `prompts/reminder_prompt.txt`
-   ```
-   # ── NEW_TYPE ──
-   Subject: Your appointment reminder
-   Body: Your new type reminder text...
-   ```
-
-3. **Update service:** `services/reminder_service.py`
-   ```python
-   def setup_appointment_reminders(self, appointment):
-       for tier in REMINDER_TIERS:
-           # Send based on tier type
-           if tier["type"] == "new_type":
-               # Custom logic for new type
-               pass
-   ```
-
-### Adding a New Validator
-
-1. **Update validators:** `utils/validators.py`
-   ```python
-   class NewValidator:
-       @staticmethod
-       def validate_new_field(value: str) -> tuple[bool, str]:
-           """Returns (is_valid, cleaned_value)"""
-           # Validation logic
-           return True, value.strip()
-   ```
-
-2. **Use in node:**
-   ```python
-   from utils.validators import NewValidator
-   
-   is_valid, cleaned = NewValidator.validate_new_field(user_input)
-   ```
+**Check**: `LLM_ENABLED=true` and `GROQ_API_KEY` is set correctly.  
+**Fallback**: App uses rule-based NLParser if LLM fails.
 
 ---
 
-## 🐛 Debugging Guide
+### Booking confirmed but workflow doesn't trigger
 
-### Common Issues & Solutions
-
-#### Issue: "Workflow keeps restarting from greeting"
-**Cause:** MemorySaver checkpoint not working  
-**Solution:**
-- Check SessionManager creates unique thread_id: `str(uuid.uuid4())`
-- Verify MemorySaver is used in graph compilation
-- Check `config={"configurable": {"thread_id": self.thread_id}}` in invoke call
-
-#### Issue: "Doctor slots not showing up"
-**Cause:** Doctor availability check failing  
-**Solution:**
-- Verify `doctors.json` exists and has doctor records
-- Check date format (YYYY-MM-DD)
-- Verify doctor working hours are set
-- Log SchedulingService.check_doctor_availability() output
-
-#### Issue: "Emails not sending"
-**Cause:** SMTP configuration or network issue  
-**Solution:**
-- Verify `.env` has correct SMTP credentials
-- Gmail: Use "App Password" not account password
-- Check internet connection
-- Enable "Less secure app access" if using Gmail
-- EmailService implements 3-attempt retry with backoff
-- Check `form_delivery_log.json` for detailed logs
-
-#### Issue: "Form tokens not unique"
-**Cause:** UUID collision (extremely rare) or token reuse  
-**Solution:**
-- Verify uuid.uuid4() is used in FormDistributionService
-- Check forms.json for duplicate tokens
-- Regenerate if collision detected
-
-#### Issue: "Reminders not sending"
-**Cause:** Reminder scheduler not running  
-**Solution:**
-- Reminders are scheduled but need background process
-- Current implementation: Scheduled data stored in JSON
-- Check ReminderService.setup_appointment_reminders() execution
-- Verify EmailService working first
-
-#### Issue: "State fields are None"
-**Cause:** Node not updating state properly  
-**Solution:**
-- Check node always returns state dict
-- Verify all reads use state.get("field") with defaults
-- Ensure fields are defined in SchedulerState TypedDict
-- Add None checks: `if state.get("field"): ...`
-
-### Debugging Techniques
-
-#### 1. Enable Debug Logging
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
-# In node
-logger.debug(f"State at {node_name}: {state}")
-```
-
-#### 2. Inspect State Between Nodes
-```python
-def debug_node(state: SchedulerState) -> SchedulerState:
-    print(f"=== DEBUG {state['current_step']} ===")
-    print(f"User input: {state.get('user_input')}")
-    print(f"Patient name: {state.get('patient_name')}")
-    print(f"Error: {state.get('error_message')}")
-    return state
-```
-
-#### 3. Test Service in Isolation
-```python
-# Test scheduling_service.py directly
-from services.scheduling_service import SchedulingService
-
-service = SchedulingService()
-doctors = service.get_available_doctors()
-print(doctors)  # Should see doctor list
-```
-
-#### 4. Verify JSON Files
-```bash
-# Check doctors.json format
-python -c "import json; print(json.dumps(json.load(open('doctors.json')), indent=2))"
-```
-
-#### 5. Check Email Logs
-```bash
-# View form delivery log
-cat form_delivery_log.json
-```
+**Cause**: `selected_time` missing — user confirmed without picking a slot.  
+**Fix**: Check `conversation_node.py` step 11 — `user_confirming` detection should force availability check.
 
 ---
 
-## 📊 System Metrics
+### Doctor buttons showing at wrong time
 
-| Metric | Value | Notes |
-|--------|-------|-------|
-| **Nodes** | 7 | greeting, patient_lookup, scheduling, insurance, confirmation, reminder, form_distribution |
-| **Services** | 6 | scheduling, patient, reminder, email, form_distribution, report |
-| **State Fields** | 43 | Typed dictionary with full coverage |
-| **Email Retries** | 3 | Exponential backoff: 5s → 10s → 30s |
-| **Reminder Tiers** | 3 | 48h, 24h, 1h before appointment |
-| **Form Security** | UUID tokens | Globally unique, unguessable URLs |
-| **Workflow Duration** | 2-3 min | Typical user → confirmation |
-| **Session Persistence** | MemorySaver | Resumes mid-workflow, never restarts |
-| **Data Format** | JSON | Human-readable, easy to debug |
-| **Excel Sheets** | 4+ | Appointments, patients, forms, reminders |
+**Cause**: Bot message contains doctor name even in non-selection context.  
+**Fix**: `render_quick_replies()` in `main.py` — check `personal_info_questions` list and `slots_already_shown` flag.
 
 ---
 
-## 📚 Quick Reference
-
-### Running the App
-
-```bash
-# Start web UI (Recommended)
-streamlit run app/main.py
-
-# Start CLI version
-python appointment_scheduler_v2.py
-
-# Start demo
-python demo.py
-```
-
-### Key Files by Purpose
-
-| Purpose | File |
-|---------|------|
-| Workflow orchestration | `agents/graph.py` |
-| State definition | `agents/state.py` |
-| 7 workflow steps | `agents/nodes/*.py` |
-| Business logic | `services/*.py` |
-| Validation | `utils/validators.py` |
-| Web interface | `app/main.py` |
-| Session management | `app/session_manager.py` |
-| Configuration | `utils/config.py` |
-| Doctor/patient data | `doctors.json`, `patients.json` |
-
-### Import Pattern
-
-```python
-# From a node
-from agents.state import SchedulerState
-from services.scheduling_service import SchedulingService
-from utils.validators import PatientDataValidator
-
-# Standard imports
-import json
-import os
-from datetime import datetime, timedelta
-```
-
----
-
-## 🎓 Learning Path
-
-**If you're new to the codebase, follow this learning path:**
-
-1. **Day 1:** Read this document (Sections: Overview → Architecture → Components)
-2. **Day 2:** Read source code (Start: `agents/graph.py` → `agents/nodes/greeting_node.py`)
-3. **Day 3:** Trace a workflow (User input → greeting_node → patient_lookup_node → state update)
-4. **Day 4:** Understand services (Pick one: `services/scheduling_service.py`)
-5. **Day 5:** Modify something (Add a new field to state, create new node)
-6. **Day 6:** Debug something (Add logging, find and fix a bug)
-7. **Day 7:** Extend feature (Add new reminder type or validator)
-
-**Key concepts to master:**
-- LangGraph StateGraph pattern
-- MemorySaver checkpointer (session persistence)
-- Layered architecture (Nodes → Services → Data)
-- State TypedDict (central data structure)
-- JSON file persistence (doctor/patient/appointment data)
-
----
-
-## ✅ Checklist for Understanding
-
-- [ ] Read project overview and understand what system does
-- [ ] Understand the 7-node workflow and how they connect
-- [ ] Know the 43 state fields and their purposes
-- [ ] Can explain data flow from user input to database
-- [ ] Understand how MemorySaver enables session persistence
-- [ ] Know the 6 services and their responsibilities
-- [ ] Can identify which file implements which feature
-- [ ] Understand validators and error handling
-- [ ] Know how to run the app (Streamlit, CLI, demo)
-- [ ] Can trace a complete appointment booking workflow
-- [ ] Know how to add a new node or service
-- [ ] Can debug and fix common issues
-
----
-
-## 📞 Support
-
-**Common Questions:**
-
-Q: Where's the email configuration?  
-A: `.env` file or `utils/config.py`
-
-Q: How do I add a new doctor?  
-A: Edit `doctors.json` directly or use admin UI
-
-Q: Can I run without Gemini API?  
-A: Yes! Set `LLM_ENABLED=false` in `.env`
-
-Q: How do I test the workflow?  
-A: Run `python demo.py` to see all features
-
-Q: Where are reminders scheduled?  
-A: `ReminderService.setup_appointment_reminders()` in `services/reminder_service.py`
-
-Q: How do I customize the UI?  
-A: Edit `app/main.py` (Streamlit components)
-
-Q: How do I change appointment duration?  
-A: Modify `PatientService.register_patient()` logic for new/returning
-
-Q: Where's the Excel report generated?  
-A: `services/excel_exporter.py`, saved to `files/` directory
-
----
-
-**Last Updated:** April 21, 2026  
-**Status:** Production Ready ✅  
-**Version:** 1.0  
+*For additional support, check the verbose terminal logs — the app outputs detailed node-by-node trace with state summaries.*
