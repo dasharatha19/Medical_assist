@@ -279,7 +279,7 @@ Tables are auto-created on first run via `initialize_database()`.
 
 ## 📝 License
 
-This project was built as part of the RagaAI Data Science Internship case study.
+This project was built as part of the Internship case study.
 
 ---
 
