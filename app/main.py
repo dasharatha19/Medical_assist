@@ -186,7 +186,11 @@ def render_quick_replies(manager: SessionManager) -> bool:
         )
     ) or st.session_state.get('change_card_done', False)
     slots_already_shown = bool(state.get('available_slots'))
-    if asking_for_doctor and not doctor_already_confirmed and not slots_already_shown:
+    asking_for_date = any(x in last_lower for x in [
+        'what date', 'which date', 'date would',
+        'appointment date', 'when would', 'prefer a date'
+    ])
+    if asking_for_doctor and not doctor_already_confirmed and not slots_already_shown and not asking_for_date:
         for i, doc in enumerate(state.get("available_doctors", []), 1):
             label = (f"{i}. {doc['name']} — "
                      f"{doc.get('specialization','')} @ {doc.get('location','')}")
