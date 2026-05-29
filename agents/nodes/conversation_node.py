@@ -570,10 +570,21 @@ def conversation_node(state: dict) -> dict:
                 )
 
     # ── 11. Phase + booking check ─────────────────────────────────────────────
+    # If user is confirming, don't block on selected_time — show slots instead
+    confirm_intent = any(
+        phrase in user_input.lower() for phrase in [
+            "yes", "confirm", "book it", "go ahead", "sure",
+            "ya", "yep", "ok", "okay", "please book",
+            "can confirm", "u can confirm", "acn confirm"
+        ]
+    )
     core_fields = [
         "patient_name","patient_dob","patient_phone","patient_email",
         "preferred_doctor","appointment_date","selected_time"
     ]
+    # If confirming but no slot yet — trigger availability check first
+    if confirm_intent and not state.get("selected_time") and state.get("preferred_doctor") and state.get("appointment_date"):
+        state["available_slots"] = []  # force re-fetch
     missing_after = [f for f in core_fields if not state.get(f)]
 
     carrier = state.get("insurance_carrier", "")
@@ -590,7 +601,17 @@ def conversation_node(state: dict) -> dict:
     state["intent"]             = llm_result.get("intent","")
     state["missing_fields"]     = missing_after
 
-    if llm_result.get("ready_to_book") and all_collected:
+    # Also detect confirmation from user input directly
+    confirm_phrases = [
+        "yes", "confirm", "book it", "go ahead", "sure",
+        "ya", "yep", "ok", "okay", "please book", "do it",
+        "can confirm", "u can confirm", "acn confirm"
+    ]
+    user_confirming = any(
+        phrase in user_input.lower() for phrase in confirm_phrases
+    ) and state.get("conversation_phase") in ["confirming", "collecting", "scheduling"]
+
+    if (llm_result.get("ready_to_book") or user_confirming) and all_collected:
         state["booking_confirmed"] = True
         state["current_step"]      = "reminders"
         state["conversation_phase"]= "done"
