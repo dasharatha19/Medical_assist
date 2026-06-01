@@ -9,7 +9,6 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import re
 from datetime import datetime, date
-from app.auth import login, signup
 
 import streamlit as st
 from app.session_manager import SessionManager
@@ -512,9 +511,6 @@ def show_auth():
 
 
 def main():
-    if "user" not in st.session_state:
-        show_auth()
-        st.stop()
     render_page_header()
     manager = initialize_session_state()
 
