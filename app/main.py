@@ -5,12 +5,11 @@ Center: Chat area
 Right: Progress + Booking status (always visible)
 """
 import sys
-import re
-from datetime import datetime, date
-# Add this import at the very top with other imports
-from app.auth import login, signup
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import re
+from datetime import datetime, date
+from app.auth import login, signup
 
 import streamlit as st
 from app.session_manager import SessionManager
