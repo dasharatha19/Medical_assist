@@ -1,6 +1,0 @@
-{
-  "label": "Update Requirements",
-  "type": "shell",
-  "command": "pip freeze | Out-File -Encoding UTF8 requirements.txt",
-  "group": "build"
-}
