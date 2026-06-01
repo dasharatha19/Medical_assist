@@ -95,15 +95,15 @@ def reminder_node(state: SchedulerState) -> SchedulerState:
     state["booking_success"]    = True
 
     state["response"] = (
-        f"🎉 **Appointment Confirmed!**\n\n"
-        f"**ID:** {state.get('appointment_id')}\n"
-        f"**Doctor:** {state.get('preferred_doctor')}\n"
-        f"**Date:** {state.get('appointment_date')}\n"
-        f"**Time:** {state.get('selected_time')}\n"
-        f"**Duration:** {state.get('appointment_duration', 60)} minutes\n\n"
-        f"✅ **3 reminders scheduled**\n"
-        f"📋 **Intake form sent to:** {state.get('patient_email')}\n"
-        f"📊 **Admin report generated**\n\n"
+        f"🎉 Appointment Confirmed!\n\n"
+        f"ID: {state.get('appointment_id')}\n"
+        f"Doctor: {state.get('preferred_doctor')}\n"
+        f"Date: {state.get('appointment_date')}\n"
+        f"Time: {state.get('selected_time')}\n"
+        f"Duration: {state.get('appointment_duration', 60)} minutes\n\n"
+        f"✅ 3 reminders scheduled\n"
+        f"📋 Intake form sent to: {state.get('patient_email')}\n"
+        f"📊 Admin report generated\n\n"
         f"You're all set! See you on {state.get('appointment_date')} 🏥"
     )
 

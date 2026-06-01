@@ -623,13 +623,13 @@ def conversation_node(state: dict) -> dict:
     if _just_matched_doctor:
         if state.get("patient_name"):
             override = (
-                f"Great choice! You've selected **{state['preferred_doctor']}**. "
+                f"Great choice! You've selected {state['preferred_doctor']}. "
                 f"What date would you like for your appointment?"
             )
         else:
             override = (
-                f"Great choice! You've selected **{state['preferred_doctor']}**. "
-                f"Now, could you please tell me your **full name**?"
+                f"Great choice! You've selected {state['preferred_doctor']}. "
+                f"Now, could you please tell me your full name?"
             )
         state["response"]           = override
         state["conversation_phase"] = "collecting"
