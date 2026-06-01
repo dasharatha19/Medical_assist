@@ -486,29 +486,6 @@ def render_text_input(manager: SessionManager) -> bool:
     manager.add_message("user", user_input)
     return True
 
-def show_auth():
-    st.title("MediBook Login")
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
-    
-    with tab1:
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            try:
-                user, token = login(email, password)
-                st.session_state["user"] = user
-                st.session_state["token"] = token
-                st.rerun()
-            except:
-                st.error("Invalid credentials")
-
-    with tab2:
-        email = st.text_input("Email", key="su_email")
-        password = st.text_input("Password", type="password", key="su_pass")
-        if st.button("Sign Up"):
-            signup(email, password)
-            st.success("Account created! Please login.")
-
 
 def main():
     render_page_header()
