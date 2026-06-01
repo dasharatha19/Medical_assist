@@ -102,6 +102,7 @@ class SessionManager:
             return self.agent_state.get("response", ""), self.workflow_complete
 
         self.agent_state["user_input"] = user_input
+        self.agent_state["session_id"] = self.thread_id  # inject session isolation key
 
         try:
             # ── Determine which node to run based on state ────────────────────

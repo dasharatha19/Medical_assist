@@ -176,7 +176,8 @@ def create_tables():
             reminders_setup     BOOLEAN DEFAULT FALSE,
             form_sent           BOOLEAN DEFAULT FALSE,
             created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            status              TEXT DEFAULT 'pending'
+            status              TEXT DEFAULT 'pending',
+            session_id          TEXT DEFAULT ''
         );
     """)
     conn.commit()
@@ -289,6 +290,7 @@ def initialize_database():
     create_database_if_not_exists()
     create_tables()
     migrate_add_conditions()
+    migrate_add_session_id()
     seed_patients()
     seed_doctors()
     logger.info("PostgreSQL database ready")
@@ -381,8 +383,8 @@ def save_appointment(state: dict) -> str:
             appointment_time,duration_minutes,patient_type,
             insurance_carrier,insurance_member_id,insurance_group_id,
             insurance_valid,booking_confirmed,booking_success,
-            reminders_setup,form_sent,status
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            reminders_setup,form_sent,status,session_id
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (appointment_id) DO UPDATE SET
             booking_confirmed = EXCLUDED.booking_confirmed,
             booking_success   = EXCLUDED.booking_success,
@@ -407,7 +409,8 @@ def save_appointment(state: dict) -> str:
         bool(state.get('booking_success')),
         bool(state.get('reminders_setup')),
         bool(state.get('form_sent')),
-        state.get('status', 'confirmed' if state.get('booking_confirmed') else 'pending')
+        state.get('status', 'confirmed' if state.get('booking_confirmed') else 'pending'),
+        state.get('session_id', '')
     ))
     conn.commit()
     cur.close()
@@ -420,6 +423,18 @@ def get_all_appointments() -> list:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute("SELECT * FROM appointments ORDER BY created_at DESC")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return [dict(r) for r in rows]
+
+def get_appointments_by_session(session_id: str) -> list:
+    conn = get_connection()
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(
+        "SELECT * FROM appointments WHERE session_id=%s ORDER BY created_at DESC",
+        (session_id,)
+    )
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -462,6 +477,18 @@ def migrate_add_conditions():
     cur.close()
     conn.close()
     logger.info("Conditions column migrated")
+
+def migrate_add_session_id():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        ALTER TABLE appointments
+        ADD COLUMN IF NOT EXISTS session_id TEXT DEFAULT ''
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+    logger.info("session_id column migrated")
 
 
 

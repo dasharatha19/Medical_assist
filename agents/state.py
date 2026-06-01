@@ -100,3 +100,6 @@ class SchedulerState(TypedDict, total=False):
     missing_fields: list         # list of fields still needed
     conversation_context: list   # full conversation for Gemini context
     db_saved: bool               # whether appointment saved to DB
+
+    # Session isolation
+    session_id: str

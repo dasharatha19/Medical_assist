@@ -493,6 +493,9 @@ def main():
 
     # ── Left sidebar — past appointments + new chat ──
     render_sidebar_info(manager.get_state_summary(), manager)
+    if 'viewed_appt' in st.session_state:
+        appt = st.session_state.pop('viewed_appt')
+        st.session_state['show_appt_summary'] = appt
 
     # ── Three column layout ──
     # Left gap | Center chat | Right panel
@@ -526,6 +529,20 @@ def main():
 
         # Chat messages
         with st.container():
+            if 'show_appt_summary' in st.session_state:
+                appt = st.session_state.pop('show_appt_summary')
+                st.markdown(f"""
+                ### 📋 Appointment Summary
+                | Field | Details |
+                |---|---|
+                | **Patient** | {appt.get('patient_name','')} |
+                | **Doctor** | {appt.get('doctor_name','')} |
+                | **Date** | {appt.get('appointment_date','')} |
+                | **Time** | {appt.get('appointment_time','')} |
+                | **Status** | {appt.get('status','')} |
+                | **Appt ID** | {appt.get('appointment_id','')} |
+                """)
+                st.stop()
             render_chat_section(manager)
             if (manager.get_conversation_history() and
                     manager.get_conversation_history()[-1]['role'] == 'user' and

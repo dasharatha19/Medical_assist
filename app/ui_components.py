@@ -502,26 +502,20 @@ def render_sidebar_info(state_dict: Dict, manager=None) -> None:
         """, unsafe_allow_html=True)
 
         try:
-            from database.db import get_all_appointments
-            appointments = get_all_appointments()
+            from database.db import get_appointments_by_session
+            session_id = manager.thread_id if manager else ''
+            appointments = get_appointments_by_session(session_id) if session_id else []
             if appointments:
-                for appt in appointments[:10]:  # show last 10
+                for appt in appointments[:10]:
                     name = appt.get('patient_name', 'Unknown')[:12]
                     doctor = appt.get('doctor_name', '').replace('Dr. ', 'Dr.')[:15]
                     appt_date = appt.get('appointment_date', '')
-                    label = f"👤 {name} · {doctor}"
-                    sub = appt_date
-                    st.markdown(f"""
-                    <div style="padding:8px 10px;margin-bottom:4px;border-radius:8px;
-                                background:rgba(124,58,237,0.08);
-                                border:1px solid rgba(124,58,237,0.15);cursor:pointer;">
-                        <div style="font-size:12px;color:rgba(255,255,255,0.8);
-                                    font-weight:500;white-space:nowrap;overflow:hidden;
-                                    text-overflow:ellipsis;">{label}</div>
-                        <div style="font-size:10px;color:rgba(255,255,255,0.35);
-                                    margin-top:2px;">{sub}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    appt_id = appt.get('appointment_id', '')
+                    label = f"👤 {name} · {doctor} · {appt_date}"
+                    if st.button(label, key=f"sidebar_appt_{appt_id}",
+                                 use_container_width=True):
+                        st.session_state['viewed_appt'] = appt
+                        st.rerun()
             else:
                 st.markdown("""
                 <div style="font-size:12px;color:rgba(255,255,255,0.25);
