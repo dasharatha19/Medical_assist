@@ -40,7 +40,6 @@ wheels/
 .DS_Store
 
 # Streamlit
-.streamlit/
 .streamlitconfig/
 
 # Database (Local Testing Only)
