@@ -109,16 +109,39 @@ class LLMClient:
         if not response_text:
             return None
         try:
-            # Clean markdown code blocks
             text = response_text.strip()
+
+            # Remove markdown code blocks
             if "```" in text:
                 parts = text.split("```")
                 text = parts[1] if len(parts) > 1 else text
                 if text.startswith("json"):
                     text = text[4:]
-            return json.loads(text.strip())
+
+            text = text.strip()
+
+            # Remove control characters that break JSON parsing
+            import re
+            text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+            # Find JSON object if there's extra text around it
+            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            if json_match:
+                text = json_match.group(0)
+
+            return json.loads(text)
+
         except json.JSONDecodeError as e:
             logger.error(f"JSON parse failed: {e}\nResponse: {response_text[:200]}")
+            # Try one more time with aggressive cleaning
+            try:
+                import re
+                text = re.sub(r'[\x00-\x1f\x7f]', ' ', response_text)
+                json_match = re.search(r'\{.*\}', text, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group(0))
+            except Exception:
+                pass
             return None
 
     def is_enabled(self) -> bool:

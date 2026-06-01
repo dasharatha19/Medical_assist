@@ -4,6 +4,7 @@ Loads static rules from prompts/ folder.
 Dynamic context injected at runtime.
 """
 import json
+import re
 
 from pyarrow.util import doc
 from utils.config import Config
@@ -664,12 +665,37 @@ def _update_state_from_extracted(state: dict, extracted: dict) -> None:
                 state["patient_name"] = result
 
     if extracted.get("patient_dob") and not state.get("patient_dob"):
-        valid, result = PatientDataValidator.validate_dob(extracted["patient_dob"])
-        if valid: state["patient_dob"] = result
+        from datetime import datetime
+        raw_dob = extracted["patient_dob"]
+        # Try multiple date formats
+        dob_formats = [
+            "%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y",
+            "%d %b %Y", "%dth %b %Y", "%dst %b %Y",
+            "%dnd %b %Y", "%drd %b %Y",
+            "%B %d, %Y", "%d %B %Y",
+            "%dth %B %Y", "%dst %B %Y",
+            "%dnd %B %Y", "%drd %B %Y"
+        ]
+        parsed_dob = None
+        # Clean ordinal suffixes
+        clean_dob = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', raw_dob, flags=re.IGNORECASE)
+        for fmt in dob_formats:
+            try:
+                parsed_dob = datetime.strptime(clean_dob.strip(), fmt).strftime("%Y-%m-%d")
+                break
+            except ValueError:
+                continue
+        if parsed_dob:
+            state["patient_dob"] = parsed_dob
+            logger.info(f"DOB parsed: '{raw_dob}' → {parsed_dob}")
 
     if extracted.get("patient_phone") and not state.get("patient_phone"):
-        valid, result = ContactValidator.validate_phone(extracted["patient_phone"])
-        if valid: state["patient_phone"] = result
+        raw_phone = extracted["patient_phone"]
+        # Strip all non-digits
+        digits_only = re.sub(r'\D', '', raw_phone)
+        if len(digits_only) >= 10:
+            state["patient_phone"] = digits_only[-10:]  # take last 10 digits
+            logger.info(f"Phone stored: {state['patient_phone']}")
 
     if extracted.get("patient_email") and not state.get("patient_email"):
         valid, result = ContactValidator.validate_email(extracted["patient_email"])
