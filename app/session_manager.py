@@ -91,7 +91,10 @@ class SessionManager:
         self.agent_state = None
         self.workflow_complete = False
         self.greeting_shown = False
-        self.thread_id = str(uuid.uuid4())
+        # Use browser localStorage session_id if passed via query param
+        import streamlit as st
+        sid = st.query_params.get('sid', '')
+        self.thread_id = sid if sid else str(uuid.uuid4())
         self._graph = None  # reset graph too
 
     def run_agent_step(self, user_input: str) -> Tuple[str, bool]:

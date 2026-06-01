@@ -12,6 +12,7 @@ from datetime import datetime, date
 
 import streamlit as st
 from app.session_manager import SessionManager
+from streamlit.components.v1 import html as st_html
 from app.ui_components import (
     render_page_header, render_chat_history,
     render_input_form, render_sidebar_info,
@@ -489,6 +490,25 @@ def render_text_input(manager: SessionManager) -> bool:
 
 def main():
     render_page_header()
+
+    # ── Inject localStorage session_id into Streamlit ──
+    st_html("""
+        <script>
+        const key = 'medibook_session_id';
+        let sid = localStorage.getItem(key);
+        if (!sid) {
+            sid = crypto.randomUUID();
+            localStorage.setItem(key, sid);
+        }
+        // Push to Streamlit via query param
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('sid') !== sid) {
+            url.searchParams.set('sid', sid);
+            window.location.replace(url.toString());
+        }
+        </script>
+    """, height=0)
+
     manager = initialize_session_state()
 
     # ── Left sidebar — past appointments + new chat ──
