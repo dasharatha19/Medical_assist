@@ -91,11 +91,8 @@ class SessionManager:
         self.agent_state = None
         self.workflow_complete = False
         self.greeting_shown = False
-        # Use browser localStorage session_id if passed via query param
-        import streamlit as st
-        sid = st.query_params.get('sid', '')
-        self.thread_id = sid if sid else str(uuid.uuid4())
-        self._graph = None  # reset graph too
+        # Keep same thread_id — don't reset, so sidebar appointments stay visible
+        self._graph = None
 
     def run_agent_step(self, user_input: str) -> Tuple[str, bool]:
         if self.agent_state is None:
