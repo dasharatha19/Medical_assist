@@ -5,6 +5,8 @@ UI Components Module - Redesigned Health Assistant UI
 import streamlit as st
 from typing import List, Dict, Optional
 
+from app.session_manager import SessionManager
+
 
 # ─── STEP CONFIG ─────────────────────────────────────────────────────────────
 STEPS = [
@@ -487,8 +489,14 @@ def render_sidebar_info(state_dict: Dict, manager=None) -> None:
         """, unsafe_allow_html=True)
 
         # New appointment button
-        if st.button("✏️ New Appointment", use_container_width=True, key="new_appt_btn"):
+        if st.button("✍️ New Appointment", use_container_width=True, key="new_appt_btn"):
+            # Save thread_id before clearing session
+            current_thread_id = st.session_state.session_manager.thread_id
             st.session_state.pop('session_manager', None)
+            # Restore same thread_id into new session manager
+            new_manager = SessionManager()
+            new_manager.thread_id = current_thread_id
+            st.session_state.session_manager = new_manager
             st.rerun()
 
         st.markdown("<div style='margin:8px 0;'></div>", unsafe_allow_html=True)
