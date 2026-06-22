@@ -251,6 +251,7 @@ def seed_doctors():
         return
     xl = pd.read_excel(SCHEDULES_XLSX, sheet_name=None, header=None)
     for _sheet_name, df in xl.items():
+
         def get_val(i, _df=df):
             try:
                 return str(_df.iloc[i, 1]).strip()

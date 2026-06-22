@@ -29,6 +29,7 @@ class ReportException(Exception):
 
     pass
 
+
 class ExcelReportGenerator:
     """
     Generates and maintains Excel reports for appointment bookings
