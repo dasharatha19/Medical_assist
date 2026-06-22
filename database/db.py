@@ -251,11 +251,10 @@ def seed_doctors():
         return
     xl = pd.read_excel(SCHEDULES_XLSX, sheet_name=None, header=None)
     for sheet_name, df in xl.items():
-
         def get_val(i):
             try:
                 return str(df.iloc[i, 1]).strip()
-            except:
+            except Exception:
                 return ""
 
         name = get_val(0)
@@ -291,7 +290,7 @@ def seed_doctors():
                         if raw == "available"
                         else "break" if raw == "break" else "unavailable"
                     )
-                except:
+                except Exception:
                     status = "unavailable"
                 cur.execute(
                     """
