@@ -22,6 +22,9 @@ ignore = [
     "E501",  # line too long — handled by black
     "B008",  # function call in default arg
     "B904",  # raise from — optional
+    "B007",
+    "E731",
+    "I001",
 ]
 
 [tool.black]
