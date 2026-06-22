@@ -1,0 +1,27 @@
+name: 🔄 Dependency Update Check
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"   # Every Monday 9AM UTC
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Audit & Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: pip install pip-audit safety
+
+      - name: Run pip-audit
+        run: pip-audit -r requirements.txt || true
+
+      - name: Run Safety check
+        run: safety check -r requirements.txt || true

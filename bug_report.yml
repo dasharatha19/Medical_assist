@@ -1,0 +1,71 @@
+name: 🐛 Bug Report
+description: Report a bug in MediBook
+title: "[BUG] <short description>"
+labels: ["bug", "triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out as much detail as possible.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Clear description of the bug
+      placeholder: What happened vs what you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step to reproduce the issue
+      placeholder: |
+        1. Open the app
+        2. Type "..."
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - Conversation Agent
+        - Booking Flow
+        - Reminder System
+        - Form Distribution
+        - Database
+        - UI/Streamlit
+        - LLM Integration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Logs
+      description: Paste any relevant error messages or logs
+      render: shell
+
+  - type: input
+    id: llm-provider
+    attributes:
+      label: LLM Provider
+      placeholder: groq / gemini / openai / none
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked existing issues for duplicates
+          required: true
+        - label: I am NOT including API keys or secrets in this report
+          required: true
