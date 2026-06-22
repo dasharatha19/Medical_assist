@@ -334,32 +334,32 @@ Medical Appointment Scheduler
         <div class="header">
             <h1>Complete Your Appointment Form</h1>
         </div>
-        
+
         <div class="content">
             <p>Dear {patient_name},</p>
-            
+
             <p>Thank you for scheduling your appointment with us! To ensure we provide you with the best possible care, we need you to complete a form before your visit.</p>
-            
+
             <div class="details">
                 <h3>📋 Appointment Details</h3>
                 <p><strong>Date & Time:</strong> {appointment_date}</p>
                 <p><strong>Doctor:</strong> {doctor}</p>
                 <p><strong>Form Type:</strong> {form_type}</p>
             </div>
-            
+
             <h3>📝 Next Steps</h3>
             <ol>
                 <li>Click the button below to complete your form</li>
                 <li>Fill in all required information (*)</li>
                 <li>Submit your form before your appointment</li>
             </ol>
-            
+
             <center>
                 <a href="{form_url}" class="button">Complete Your Form</a>
             </center>
-            
+
             <p><em>The form typically takes 5-10 minutes to complete. If you have any questions, please reply to this email.</em></p>
-            
+
             <p>Best regards,<br>Medical Appointment Scheduler</p>
         </div>
     </div>
@@ -573,18 +573,18 @@ Medical Appointment Scheduler
         <div class="header">
             <h1>⚠️ Form Reminder</h1>
         </div>
-        
+
         <div class="content">
             <p>Hi {patient_name},</p>
-            
+
             <p>We noticed you haven't completed your appointment form yet. Your appointment is coming up on <strong>{appointment_date}</strong>, and we need your form to be submitted before then.</p>
-            
+
             <center>
                 <a href="{form_url}" class="button">Complete Your Form Now</a>
             </center>
-            
+
             <p>If you have any questions, please don't hesitate to reach out.</p>
-            
+
             <p>Thank you!<br>Medical Appointment Scheduler</p>
         </div>
     </div>

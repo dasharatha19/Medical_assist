@@ -1,4 +1,4 @@
-from .db import (
+from .db import (  # noqa: F401
     book_slot,
     export_appointments_excel,
     get_all_appointments,

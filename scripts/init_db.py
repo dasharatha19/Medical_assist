@@ -7,17 +7,15 @@ Run after first deploy or local setup.
 Usage:
     python scripts/init_db.py
 """
+import logging
 import os
 import sys
 
-# Ensure project root on path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from dotenv import load_dotenv
 
+# Ensure project root on path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 load_dotenv()
-
-import logging
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)

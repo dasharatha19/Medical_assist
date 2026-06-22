@@ -592,7 +592,7 @@ class EdgeCaseValidator:
 
                 # Check if there's overlap
                 if (new_start < existing_end) and (new_end > existing_start):
-                    existing_duration = apt.get("duration", 30)
+                    # existing_duration removed (unused)
                     return (
                         False,
                         f"Slot conflicts with existing appointment ({existing_start.strftime('%H:%M')} - {existing_end.strftime('%H:%M')})",

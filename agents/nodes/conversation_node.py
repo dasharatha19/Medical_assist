@@ -6,9 +6,9 @@ Dynamic context injected at runtime.
 
 import logging
 import re
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-
 from tools import tools
 from utils.config import Config
 from utils.llm_client import get_llm_client
@@ -18,8 +18,6 @@ from utils.verbose_logger import verbose
 logger = logging.getLogger(__name__)
 
 # ── Terminal trace logging setup ──────────────────────────────────────────────
-import sys
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",

@@ -23,7 +23,7 @@ STEP_KEYS = [s[0] for s in STEPS]
 def inject_css() -> None:
     st.markdown(
         """
-    <style>    
+    <style>
     /* Make << close button visible */
     button[data-testid="baseButton-headerNoPadding"] {
         background: rgba(124,58,237,0.5) !important;
@@ -48,7 +48,7 @@ def inject_css() -> None:
     }
     [data-testid="collapsedControl"] svg {
         fill: white !important;
-    }       
+    }
     @import url('https://fonts.googleapis.com/css2?family=Geist+Sans:wght@300;400;500;600&display=swap');
 
     html, body, [class*="css"] {

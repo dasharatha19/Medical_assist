@@ -60,7 +60,7 @@ User input: "{user_input}"
 
 IMPORTANT RULES:
 - Extract ONLY the actual value, NOT the full sentence
-- For name: return "John Smith" NOT "my name is John Smith"  
+- For name: return "John Smith" NOT "my name is John Smith"
 - For date_of_birth: return "1990-03-15" NOT "born in March 1990"
 - If a field is not mentioned, return null
 

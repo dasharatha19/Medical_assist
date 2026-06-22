@@ -135,7 +135,7 @@ def export_appointment_to_excel(appointment_data: dict, output_dir: str = "files
 
     # ── Section 4: Reminders ─────────────────────────────────
     section_header(r, "🔔 Reminders Scheduled")
-    appt_dt = f"{appointment_data.get('appointment_date', '')} {appointment_data.get('selected_time', '')}"
+    # appointment datetime removed (unused)
     reminder_rows = [
         ("Reminder 1 (48h before)", "General reminder — appointment coming up"),
         ("Reminder 2 (24h before)", "Action: Have you filled your intake forms?"),

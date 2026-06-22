@@ -29,7 +29,6 @@ class ReportException(Exception):
 
     pass
 
-
 class ExcelReportGenerator:
     """
     Generates and maintains Excel reports for appointment bookings
@@ -163,7 +162,7 @@ class ExcelReportGenerator:
             last_id = worksheet.cell(row=max_row, column=1).value
             if isinstance(last_id, int):
                 return last_id + 1
-        except:
+        except Exception:
             pass
 
         return max_row - 1  # max_row - 1 (excluding header)
@@ -376,7 +375,7 @@ class ExcelReportGenerator:
             wb = load_workbook(self.report_path)
             ws = wb.active
             return max(0, ws.max_row - 1)  # Subtract 1 for header
-        except:
+        except Exception:
             return 0
 
     def get_report_summary(self) -> dict:

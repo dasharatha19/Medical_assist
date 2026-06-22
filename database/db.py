@@ -94,7 +94,7 @@ def create_tables():
             time_slot   TEXT,
             status      TEXT DEFAULT 'available'
         );
-                
+
                 -- forms table
         CREATE TABLE IF NOT EXISTS forms (
             form_id          TEXT PRIMARY KEY,
@@ -250,10 +250,10 @@ def seed_doctors():
         conn.close()
         return
     xl = pd.read_excel(SCHEDULES_XLSX, sheet_name=None, header=None)
-    for sheet_name, df in xl.items():
-        def get_val(i):
+    for _sheet_name, df in xl.items():
+        def get_val(i, _df=df):
             try:
-                return str(df.iloc[i, 1]).strip()
+                return str(_df.iloc[i, 1]).strip()
             except Exception:
                 return ""
 
@@ -364,7 +364,7 @@ def get_all_doctors() -> list:
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
         """
-        SELECT doctor_id, name, specialization, 
+        SELECT doctor_id, name, specialization,
                location, working_hours, break_time,
                COALESCE(conditions, '') as conditions
         FROM doctors
@@ -499,7 +499,7 @@ def migrate_add_conditions():
     cur = conn.cursor()
     cur.execute(
         """
-        ALTER TABLE doctors 
+        ALTER TABLE doctors
         ADD COLUMN IF NOT EXISTS conditions TEXT
     """
     )
