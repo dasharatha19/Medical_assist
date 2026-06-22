@@ -7,6 +7,7 @@ Run after first deploy or local setup.
 Usage:
     python scripts/init_db.py
 """
+
 import logging
 import os
 import sys

@@ -37,8 +37,7 @@ def render_chat_section(manager: SessionManager) -> None:
         render_chat_history(messages)
     else:
         # Welcome screen when no chat started
-        st.markdown(
-            """
+        st.markdown("""
         <div style="display:flex;flex-direction:column;align-items:center;
                     justify-content:center;padding:60px 20px;text-align:center;">
             <div style="font-size:48px;margin-bottom:16px;">🏥</div>
@@ -65,8 +64,7 @@ def process_pending_input(manager: SessionManager) -> None:
         return
     last_input = messages[-1]["content"]
     typing = st.empty()
-    typing.markdown(
-        """
+    typing.markdown("""
     <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
         <div style="width:34px;height:34px;border-radius:50%;
                     background:linear-gradient(135deg,#7c3aed,#4f1d9e);
@@ -112,8 +110,7 @@ def render_dob_picker(manager: SessionManager) -> bool:
     state = manager.agent_state or {}
     if "date of birth" not in last_msg or state.get("collecting_step") != "dob":
         return False
-    st.markdown(
-        """
+    st.markdown("""
     <div style="background:linear-gradient(135deg,#667eea22,#764ba222);
                 border:2px dashed #3b9eff;border-radius:16px;
                 padding:16px 20px;margin:8px 0 12px 0;text-align:center;">
@@ -498,8 +495,7 @@ def render_change_appointment_card(manager: SessionManager) -> bool:
 
     elif step == 3:
         # ── Step 3: Doctor list ────────────────────────────────────────
-        st.markdown(
-            """
+        st.markdown("""
         <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:12px;">
             👨‍⚕️ Choose a doctor:
         </div>
@@ -537,8 +533,7 @@ def render_change_appointment_card(manager: SessionManager) -> bool:
 def _quick_reply(manager: SessionManager, value: str) -> bool:
     manager.add_message("user", value)
     typing = st.empty()
-    typing.markdown(
-        """
+    typing.markdown("""
     <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
         <div style="width:34px;height:34px;border-radius:50%;
                     background:linear-gradient(135deg,#7c3aed,#4f1d9e);
@@ -591,8 +586,7 @@ def main():
     render_page_header()
 
     # ── Inject localStorage session_id into Streamlit ──
-    st_html(
-        """
+    st_html("""
         <script>
         const key = 'medibook_session_id';
         let sid = localStorage.getItem(key);
@@ -656,8 +650,7 @@ def main():
         with st.container():
             if "show_appt_summary" in st.session_state:
                 appt = st.session_state.pop("show_appt_summary")
-                st.markdown(
-                    f"""
+                st.markdown(f"""
                 ### 📋 Appointment Summary
                 | Field | Details |
                 |---|---|
@@ -667,8 +660,7 @@ def main():
                 | **Time** | {appt.get('appointment_time','')} |
                 | **Status** | {appt.get('status','')} |
                 | **Appt ID** | {appt.get('appointment_id','')} |
-                """
-                )
+                """)
                 st.stop()
             render_chat_section(manager)
             if (

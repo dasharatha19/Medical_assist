@@ -60,8 +60,7 @@ def create_database_if_not_exists():
 def create_tables():
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS patients (
             patient_id        TEXT PRIMARY KEY,
             first_name        TEXT,
@@ -184,8 +183,7 @@ def create_tables():
             status              TEXT DEFAULT 'pending',
             session_id          TEXT DEFAULT ''
         );
-    """
-    )
+    """)
     conn.commit()
     cur.close()
     conn.close()
@@ -208,8 +206,7 @@ def seed_patients():
     df["phone"] = df["phone"].apply(lambda x: str(int(float(x))) if pd.notna(x) else "")
     df["full_name"] = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
     for _, row in df.iterrows():
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO patients
             (patient_id,first_name,last_name,full_name,dob,phone,email,
              insurance_carrier,member_id,group_id,last_visit,patient_type)
@@ -264,8 +261,7 @@ def seed_doctors():
         working_hours = get_val(3)
         break_time = get_val(4)
         doctor_id = f"DR_{name.replace(' ','_').replace('.','')}"
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO doctors
             (doctor_id,name,specialization,location,working_hours,break_time)
             VALUES (%s,%s,%s,%s,%s,%s)
@@ -321,8 +317,7 @@ def initialize_database():
 def lookup_patient(name: str, dob: str) -> dict:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute(
-        """
+    cur.execute("""
         SELECT * FROM patients
         WHERE LOWER(full_name)=%s AND dob=%s
     """,
@@ -338,8 +333,7 @@ def register_new_patient(data: dict) -> str:
     conn = get_connection()
     cur = conn.cursor()
     pid = f"P{uuid.uuid4().hex[:6].upper()}"
-    cur.execute(
-        """
+    cur.execute("""
         INSERT INTO patients
         (patient_id,full_name,dob,phone,email,patient_type)
         VALUES (%s,%s,%s,%s,%s,%s)
@@ -363,15 +357,13 @@ def register_new_patient(data: dict) -> str:
 def get_all_doctors() -> list:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute(
-        """
+    cur.execute("""
         SELECT doctor_id, name, specialization,
                location, working_hours, break_time,
                COALESCE(conditions, '') as conditions
         FROM doctors
         ORDER BY name
-    """
-    )
+        """)
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -382,8 +374,7 @@ def get_available_slots(doctor_name: str, date: str) -> list:
     conn = get_connection()
     cur = conn.cursor()
     doctor_id = f"DR_{doctor_name.replace(' ','_').replace('.','')}"
-    cur.execute(
-        """
+    cur.execute("""
         SELECT time_slot FROM doctor_slots
         WHERE doctor_id=%s AND date=%s AND status='available'
         ORDER BY time_slot
@@ -400,8 +391,7 @@ def book_slot(doctor_name: str, date: str, time_slot: str) -> bool:
     conn = get_connection()
     cur = conn.cursor()
     doctor_id = f"DR_{doctor_name.replace(' ','_').replace('.','')}"
-    cur.execute(
-        """
+    cur.execute("""
         UPDATE doctor_slots SET status='booked'
         WHERE doctor_id=%s AND date=%s AND time_slot=%s
     """,
@@ -418,8 +408,7 @@ def save_appointment(state: dict) -> str:
     conn = get_connection()
     cur = conn.cursor()
     appt_id = state.get("appointment_id") or f"APT{uuid.uuid4().hex[:6].upper()}"
-    cur.execute(
-        """
+    cur.execute("""
         INSERT INTO appointments (
             appointment_id,patient_id,patient_name,patient_dob,
             patient_email,patient_phone,doctor_name,appointment_date,
@@ -498,8 +487,7 @@ def migrate_add_conditions():
     """Add conditions column if it doesn't exist yet."""
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         ALTER TABLE doctors
         ADD COLUMN IF NOT EXISTS conditions TEXT
     """
@@ -530,12 +518,10 @@ def migrate_add_conditions():
 def migrate_add_session_id():
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         ALTER TABLE appointments
         ADD COLUMN IF NOT EXISTS session_id TEXT DEFAULT ''
-    """
-    )
+    """)
     conn.commit()
     cur.close()
     conn.close()
@@ -547,8 +533,7 @@ def migrate_add_session_id():
 def save_form(form_data: dict) -> bool:
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         INSERT INTO forms (
             form_id, appointment_id, patient_id, patient_name,
             patient_email, doctor, appointment_date, form_type,
@@ -592,8 +577,7 @@ def get_form(appointment_id: str) -> dict:
 def update_form_sent(appointment_id: str) -> bool:
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         UPDATE forms SET sent=TRUE, sent_at=NOW(),
         delivery_attempts = delivery_attempts + 1
         WHERE appointment_id=%s
@@ -609,8 +593,7 @@ def update_form_sent(appointment_id: str) -> bool:
 def update_form_completed(appointment_id: str) -> bool:
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         UPDATE forms SET completed=TRUE, completed_at=NOW()
         WHERE appointment_id=%s
     """,
@@ -627,8 +610,7 @@ def save_reminders(appointment_id: str, email: str, phone: str, reminders: list)
     conn = get_connection()
     cur = conn.cursor()
     for r in reminders:
-        cur.execute(
-            """
+        cur.execute("""
             INSERT INTO reminders (
                 reminder_id, appointment_id, patient_email,
                 patient_phone, reminder_type, scheduled_time
