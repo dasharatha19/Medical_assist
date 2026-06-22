@@ -1,10 +1,8 @@
-name: CI — Lint, Test, Build
-
 on:
   push:
-    branches: [main, second-comp, develop]
+    branches: [main, second-comp, develop, chore/production-hardening]
   pull_request:
-    branches: [main, second-comp]
+    branches: [main, second-comp, chore/production-hardening]
 
 env:
   PYTHON_VERSION: "3.11"
