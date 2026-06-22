@@ -497,8 +497,7 @@ def migrate_add_conditions():
     cur.execute("""
         ALTER TABLE doctors
         ADD COLUMN IF NOT EXISTS conditions TEXT
-    """
-    )
+    """)
     # Update conditions for existing doctors
     conditions_map = {
         "DR_Dr_John_Smith": "common cold, fever, flu, headache, general checkup, fatigue, "
@@ -540,7 +539,8 @@ def migrate_add_session_id():
 def save_form(form_data: dict) -> bool:
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO forms (
             form_id, appointment_id, patient_id, patient_name,
             patient_email, doctor, appointment_date, form_type,
@@ -584,7 +584,8 @@ def get_form(appointment_id: str) -> dict:
 def update_form_sent(appointment_id: str) -> bool:
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         UPDATE forms SET sent=TRUE, sent_at=NOW(),
         delivery_attempts = delivery_attempts + 1
         WHERE appointment_id=%s
@@ -600,7 +601,8 @@ def update_form_sent(appointment_id: str) -> bool:
 def update_form_completed(appointment_id: str) -> bool:
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         UPDATE forms SET completed=TRUE, completed_at=NOW()
         WHERE appointment_id=%s
     """,
@@ -617,7 +619,8 @@ def save_reminders(appointment_id: str, email: str, phone: str, reminders: list)
     conn = get_connection()
     cur = conn.cursor()
     for r in reminders:
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO reminders (
                 reminder_id, appointment_id, patient_email,
                 patient_phone, reminder_type, scheduled_time
