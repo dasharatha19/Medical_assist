@@ -206,7 +206,8 @@ def seed_patients():
     df["phone"] = df["phone"].apply(lambda x: str(int(float(x))) if pd.notna(x) else "")
     df["full_name"] = df["first_name"].str.strip() + " " + df["last_name"].str.strip()
     for _, row in df.iterrows():
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO patients
             (patient_id,first_name,last_name,full_name,dob,phone,email,
              insurance_carrier,member_id,group_id,last_visit,patient_type)
@@ -261,7 +262,8 @@ def seed_doctors():
         working_hours = get_val(3)
         break_time = get_val(4)
         doctor_id = f"DR_{name.replace(' ','_').replace('.','')}"
-        cur.execute("""
+        cur.execute(
+            """
             INSERT INTO doctors
             (doctor_id,name,specialization,location,working_hours,break_time)
             VALUES (%s,%s,%s,%s,%s,%s)
@@ -317,7 +319,8 @@ def initialize_database():
 def lookup_patient(name: str, dob: str) -> dict:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("""
+    cur.execute(
+        """
         SELECT * FROM patients
         WHERE LOWER(full_name)=%s AND dob=%s
     """,
@@ -333,7 +336,8 @@ def register_new_patient(data: dict) -> str:
     conn = get_connection()
     cur = conn.cursor()
     pid = f"P{uuid.uuid4().hex[:6].upper()}"
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO patients
         (patient_id,full_name,dob,phone,email,patient_type)
         VALUES (%s,%s,%s,%s,%s,%s)
@@ -374,7 +378,8 @@ def get_available_slots(doctor_name: str, date: str) -> list:
     conn = get_connection()
     cur = conn.cursor()
     doctor_id = f"DR_{doctor_name.replace(' ','_').replace('.','')}"
-    cur.execute("""
+    cur.execute(
+        """
         SELECT time_slot FROM doctor_slots
         WHERE doctor_id=%s AND date=%s AND status='available'
         ORDER BY time_slot
@@ -391,7 +396,8 @@ def book_slot(doctor_name: str, date: str, time_slot: str) -> bool:
     conn = get_connection()
     cur = conn.cursor()
     doctor_id = f"DR_{doctor_name.replace(' ','_').replace('.','')}"
-    cur.execute("""
+    cur.execute(
+        """
         UPDATE doctor_slots SET status='booked'
         WHERE doctor_id=%s AND date=%s AND time_slot=%s
     """,
@@ -408,7 +414,8 @@ def save_appointment(state: dict) -> str:
     conn = get_connection()
     cur = conn.cursor()
     appt_id = state.get("appointment_id") or f"APT{uuid.uuid4().hex[:6].upper()}"
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO appointments (
             appointment_id,patient_id,patient_name,patient_dob,
             patient_email,patient_phone,doctor_name,appointment_date,
