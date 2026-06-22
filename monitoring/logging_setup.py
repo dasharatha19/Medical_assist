@@ -8,25 +8,33 @@ Usage:
     logger = get_logger(__name__)
     logger.info("appointment_booked", patient_id="P-001", doctor="Dr. Smith")
 """
-import logging
-import sys
-import os
+
 import json
-from datetime import datetime, timezone
+import logging
+import os
+import sys
+from datetime import UTC, datetime
 
 
 class StructuredFormatter(logging.Formatter):
     """JSON log formatter for production observability."""
 
     SENSITIVE_KEYS = {
-        "password", "api_key", "groq_api_key", "gemini_api_key",
-        "openai_api_key", "insurance_member_id", "insurance_group_id",
-        "patient_dob", "patient_phone", "patient_email"
+        "password",
+        "api_key",
+        "groq_api_key",
+        "gemini_api_key",
+        "openai_api_key",
+        "insurance_member_id",
+        "insurance_group_id",
+        "patient_dob",
+        "patient_phone",
+        "patient_email",
     }
 
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -38,11 +46,28 @@ class StructuredFormatter(logging.Formatter):
         # Add extra fields (from logger.info("msg", extra={...}))
         for key, val in record.__dict__.items():
             if key not in {
-                "msg", "args", "levelname", "levelno", "pathname",
-                "filename", "module", "exc_info", "exc_text", "stack_info",
-                "lineno", "funcName", "created", "msecs", "relativeCreated",
-                "thread", "threadName", "processName", "process", "name",
-                "message", "asctime"
+                "msg",
+                "args",
+                "levelname",
+                "levelno",
+                "pathname",
+                "filename",
+                "module",
+                "exc_info",
+                "exc_text",
+                "stack_info",
+                "lineno",
+                "funcName",
+                "created",
+                "msecs",
+                "relativeCreated",
+                "thread",
+                "threadName",
+                "processName",
+                "process",
+                "name",
+                "message",
+                "asctime",
             }:
                 # Redact sensitive fields
                 if key.lower() in self.SENSITIVE_KEYS:
@@ -80,10 +105,12 @@ def setup_logging(log_level: str = None) -> None:
     if os.getenv("ENVIRONMENT", "development") == "production":
         handler.setFormatter(StructuredFormatter())
     else:
-        handler.setFormatter(logging.Formatter(
-            "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        ))
+        handler.setFormatter(
+            logging.Formatter(
+                "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
 
     root_logger.addHandler(handler)
 
@@ -133,12 +160,13 @@ class LLMCallLogger:
                 "duration_ms": round(duration_ms, 2),
                 "session_id": session_id,
                 "total_calls_session": self.total_calls,
-            }
+            },
         )
 
 
 # Singleton
 _llm_call_logger = None
+
 
 def get_llm_call_logger() -> LLMCallLogger:
     global _llm_call_logger

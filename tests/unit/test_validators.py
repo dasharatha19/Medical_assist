@@ -2,13 +2,13 @@
 tests/unit/test_validators.py
 Unit tests for input validation logic.
 """
-import pytest
-import sys
+
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
-from utils.validators import PatientDataValidator, ContactValidator, SchedulingValidator
+from utils.validators import ContactValidator, PatientDataValidator, SchedulingValidator
 
 
 class TestPatientDataValidator:
@@ -73,6 +73,7 @@ class TestContactValidator:
 class TestSchedulingValidator:
     def test_valid_future_date(self):
         from datetime import date, timedelta
+
         future = str(date.today() + timedelta(days=5))
         valid, msg = SchedulingValidator.validate_appointment_date(future)
         assert valid is True

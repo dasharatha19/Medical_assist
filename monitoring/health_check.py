@@ -8,57 +8,57 @@ Can be called from:
   - A FastAPI /health endpoint (if added later)
   - A CLI script: python -m monitoring.health_check
 """
+
+import logging
 import os
 import time
-import logging
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def check_database() -> Dict[str, Any]:
+def check_database() -> dict[str, Any]:
     """Check PostgreSQL connectivity."""
     start = time.time()
     try:
         from database.db import get_connection
+
         conn = get_connection()
         cur = conn.cursor()
         cur.execute("SELECT 1")
         cur.close()
         conn.close()
-        return {
-            "status": "healthy",
-            "latency_ms": round((time.time() - start) * 1000, 2)
-        }
+        return {"status": "healthy", "latency_ms": round((time.time() - start) * 1000, 2)}
     except Exception as e:
         return {
             "status": "unhealthy",
             "error": str(e),
-            "latency_ms": round((time.time() - start) * 1000, 2)
+            "latency_ms": round((time.time() - start) * 1000, 2),
         }
 
 
-def check_llm() -> Dict[str, Any]:
+def check_llm() -> dict[str, Any]:
     """Check LLM client initialization."""
     start = time.time()
     try:
         from utils.llm_client import get_llm_client
+
         client = get_llm_client()
         return {
             "status": "healthy" if client.is_enabled() else "disabled",
             "provider": client.provider,
             "model": client.model,
-            "latency_ms": round((time.time() - start) * 1000, 2)
+            "latency_ms": round((time.time() - start) * 1000, 2),
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "error": str(e),
-            "latency_ms": round((time.time() - start) * 1000, 2)
+            "latency_ms": round((time.time() - start) * 1000, 2),
         }
 
 
-def check_config() -> Dict[str, Any]:
+def check_config() -> dict[str, Any]:
     """Validate essential configuration."""
     issues = []
     try:
@@ -80,7 +80,7 @@ def check_config() -> Dict[str, Any]:
         return {"status": "unhealthy", "error": str(e)}
 
 
-def full_health_check() -> Dict[str, Any]:
+def full_health_check() -> dict[str, Any]:
     """Run all health checks and return combined status."""
     results = {
         "database": check_database(),
@@ -106,6 +106,7 @@ def full_health_check() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     import json
+
     result = full_health_check()
     print(json.dumps(result, indent=2))
     exit(0 if result["status"] in ("healthy", "degraded") else 1)

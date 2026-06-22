@@ -3,19 +3,17 @@ UI Components Module - Redesigned Health Assistant UI
 """
 
 import streamlit as st
-from typing import List, Dict, Optional
 
 from app.session_manager import SessionManager
 
-
 # ─── STEP CONFIG ─────────────────────────────────────────────────────────────
 STEPS = [
-    ("greeting",        "Your Name"),
-    ("patient_lookup",  "Patient Check"),
-    ("scheduling",      "Pick a Date"),
-    ("insurance",       "Insurance"),
-    ("confirmation",    "Confirm"),
-    ("reminders",       "Done!"),
+    ("greeting", "Your Name"),
+    ("patient_lookup", "Patient Check"),
+    ("scheduling", "Pick a Date"),
+    ("insurance", "Insurance"),
+    ("confirmation", "Confirm"),
+    ("reminders", "Done!"),
 ]
 
 STEP_KEYS = [s[0] for s in STEPS]
@@ -23,7 +21,8 @@ STEP_KEYS = [s[0] for s in STEPS]
 
 # ─── CSS INJECTION ────────────────────────────────────────────────────────────
 def inject_css() -> None:
-    st.markdown("""
+    st.markdown(
+        """
     <style>    
     /* Make << close button visible */
     button[data-testid="baseButton-headerNoPadding"] {
@@ -387,7 +386,9 @@ section[data-testid="stSidebar"] .stButton button {
         display: block !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # ─── PAGE HEADER ─────────────────────────────────────────────────────────────
@@ -397,14 +398,20 @@ def render_page_header() -> None:
         page_title="MediBook – AI Scheduler",
         page_icon="🏥",
         layout="wide",
-        initial_sidebar_state="expanded"
+        initial_sidebar_state="expanded",
     )
     inject_css()
 
+
 # ─── TOP BAR (replaces st.title) ─────────────────────────────────────────────
 def render_top_bar(patient_name: str = "") -> None:
-    subtitle = f"Hi {patient_name}, let's find you the right doctor" if patient_name else "AI-Powered Appointment Scheduling"
-    st.markdown(f"""
+    subtitle = (
+        f"Hi {patient_name}, let's find you the right doctor"
+        if patient_name
+        else "AI-Powered Appointment Scheduling"
+    )
+    st.markdown(
+        f"""
     <div class="top-header">
         <div>
             <p class="top-header-title">🏥 MediBook</p>
@@ -412,55 +419,61 @@ def render_top_bar(patient_name: str = "") -> None:
         </div>
         <span class="status-dot">● Online</span>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_chat_message(role: str, content: str) -> None:
     """Render a single styled chat bubble."""
     if role == "user":
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div class="msg-row-user">
             <div class="avatar-user">ME</div>
             <div class="bubble-user">{content}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
     else:
         # Replace emoji with styled HTML symbols
-        styled = content \
-            .replace("✅", '<span style="color:#22c55e;font-size:15px;font-weight:700;">✔</span>') \
-            .replace("❌", '<span style="color:#ef4444;font-size:15px;font-weight:700;">✘</span>') \
-            .replace("⚠️", '<span style="color:#f59e0b;font-size:15px;font-weight:700;">⚠</span>') \
-            .replace("🎉", "🎉") \
+        styled = (
+            content.replace(
+                "✅", '<span style="color:#22c55e;font-size:15px;font-weight:700;">✔</span>'
+            )
+            .replace("❌", '<span style="color:#ef4444;font-size:15px;font-weight:700;">✘</span>')
+            .replace("⚠️", '<span style="color:#f59e0b;font-size:15px;font-weight:700;">⚠</span>')
+            .replace("🎉", "🎉")
             .replace("📋", "📋")
-        st.markdown(f"""
+        )
+        st.markdown(
+            f"""
         <div class="msg-row-bot">
             <div class="avatar-bot">🤖</div>
             <div class="bubble-bot">{styled}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
 
-def render_chat_history(messages: List[Dict[str, str]]) -> None:
+def render_chat_history(messages: list[dict[str, str]]) -> None:
     """Render full conversation history."""
     st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
     for message in messages:
-        render_chat_message(
-            message.get('role', 'assistant'),
-            message.get('content', '')
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
+        render_chat_message(message.get("role", "assistant"), message.get("content", ""))
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ─── INPUT FORM ───────────────────────────────────────────────────────────────
-def render_input_form() -> Optional[str]:
+def render_input_form() -> str | None:
     """Render the styled input form."""
     with st.form(key="user_input_form", clear_on_submit=True):
         col_inp, col_btn = st.columns([5, 1])
         with col_inp:
             user_input = st.text_input(
-                "response",
-                placeholder="Type your answer here...",
-                label_visibility="collapsed"
+                "response", placeholder="Type your answer here...", label_visibility="collapsed"
             )
         with col_btn:
             submitted = st.form_submit_button("Send ↗", use_container_width=True)
@@ -472,10 +485,11 @@ def render_input_form() -> Optional[str]:
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 # ─── UPDATED SIDEBAR (left — past appointments) ───────────────────────────────
-def render_sidebar_info(state_dict: Dict, manager=None) -> None:
+def render_sidebar_info(state_dict: dict, manager=None) -> None:
     with st.sidebar:
         # Logo
-        st.markdown("""
+        st.markdown(
+            """
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0 16px;
                     border-bottom:1px solid rgba(124,58,237,0.2);margin-bottom:12px;">
             <div style="width:36px;height:36px;background:linear-gradient(135deg,#7c3aed,#4f1d9e);
@@ -486,13 +500,15 @@ def render_sidebar_info(state_dict: Dict, manager=None) -> None:
                 <div style="font-size:10px;color:rgba(255,255,255,0.35);">AI Scheduler</div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         # New appointment button
         if st.button("✍️ New Appointment", use_container_width=True, key="new_appt_btn"):
             # Save thread_id before clearing session
             current_thread_id = st.session_state.session_manager.thread_id
-            st.session_state.pop('session_manager', None)
+            st.session_state.pop("session_manager", None)
             # Restore same thread_id into new session manager
             new_manager = SessionManager()
             new_manager.thread_id = current_thread_id
@@ -502,44 +518,54 @@ def render_sidebar_info(state_dict: Dict, manager=None) -> None:
         st.markdown("<div style='margin:8px 0;'></div>", unsafe_allow_html=True)
 
         # Past appointments from DB
-        st.markdown("""
+        st.markdown(
+            """
         <div style="font-size:10px;color:rgba(255,255,255,0.35);text-transform:uppercase;
                     letter-spacing:0.1em;margin-bottom:8px;">
             Past Appointments
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
         try:
             from database.db import get_appointments_by_session
-            session_id = manager.thread_id if manager else ''
+
+            session_id = manager.thread_id if manager else ""
             appointments = get_appointments_by_session(session_id) if session_id else []
             if appointments:
                 for appt in appointments[:10]:
-                    name = appt.get('patient_name', 'Unknown')[:12]
-                    doctor = appt.get('doctor_name', '').replace('Dr. ', 'Dr.')[:15]
-                    appt_date = appt.get('appointment_date', '')
-                    appt_id = appt.get('appointment_id', '')
+                    name = appt.get("patient_name", "Unknown")[:12]
+                    doctor = appt.get("doctor_name", "").replace("Dr. ", "Dr.")[:15]
+                    appt_date = appt.get("appointment_date", "")
+                    appt_id = appt.get("appointment_id", "")
                     label = f"👤 {name} · {doctor} · {appt_date}"
-                    if st.button(label, key=f"sidebar_appt_{appt_id}",
-                                 use_container_width=True):
-                        st.session_state['viewed_appt'] = appt
+                    if st.button(label, key=f"sidebar_appt_{appt_id}", use_container_width=True):
+                        st.session_state["viewed_appt"] = appt
                         st.rerun()
             else:
-                st.markdown("""
+                st.markdown(
+                    """
                 <div style="font-size:12px;color:rgba(255,255,255,0.25);
                             padding:8px;text-align:center;">
                     No past appointments
                 </div>
-                """, unsafe_allow_html=True)
+                """,
+                    unsafe_allow_html=True,
+                )
         except Exception:
-            st.markdown("""
+            st.markdown(
+                """
             <div style="font-size:12px;color:rgba(255,255,255,0.25);padding:8px;">
                 No history yet
             </div>
-            """, unsafe_allow_html=True)
-            
+            """,
+                unsafe_allow_html=True,
+            )
+
+
 # ─── STATUS PANEL (right column) ─────────────────────────────────────────────
-def render_state_info(state_dict: Dict) -> None:
+def render_state_info(state_dict: dict) -> None:
     """Live booking status card in the right panel."""
     if not state_dict:
         return
@@ -547,35 +573,47 @@ def render_state_info(state_dict: Dict) -> None:
     st.markdown("##### 📋 Booking Status")
 
     fields = [
-        ("Patient",      state_dict.get('patient_name', '')),
-        ("Type",         state_dict.get('patient_type', '')),
-        ("Doctor",       state_dict.get('preferred_doctor', '')),
-        ("Date",         state_dict.get('appointment_date', '')),
-        ("Time",         state_dict.get('selected_time', '')),
-        ("Duration",     f"{state_dict.get('appointment_duration', '')} min"
-                         if state_dict.get('appointment_duration') else ''),
-        ("Insurance",    state_dict.get('insurance_carrier', '')),
+        ("Patient", state_dict.get("patient_name", "")),
+        ("Type", state_dict.get("patient_type", "")),
+        ("Doctor", state_dict.get("preferred_doctor", "")),
+        ("Date", state_dict.get("appointment_date", "")),
+        ("Time", state_dict.get("selected_time", "")),
+        (
+            "Duration",
+            (
+                f"{state_dict.get('appointment_duration', '')} min"
+                if state_dict.get("appointment_duration")
+                else ""
+            ),
+        ),
+        ("Insurance", state_dict.get("insurance_carrier", "")),
     ]
 
     rows_html = ""
     for label, val in fields:
         if val and val.strip() and val != " min":
-            rows_html += (f'<div class="booking-row">'
-                          f'<span class="bkey">{label}</span>'
-                          f'<span class="bval">{val}</span></div>')
+            rows_html += (
+                f'<div class="booking-row">'
+                f'<span class="bkey">{label}</span>'
+                f'<span class="bval">{val}</span></div>'
+            )
 
-    if state_dict.get('appointment_id'):
-        rows_html += (f'<div class="booking-row">'
-                      f'<span class="bkey">Appt ID</span>'
-                      f'<span class="bval" style="color:#059669;font-size:11px;">'
-                      f'{state_dict["appointment_id"]}</span></div>')
+    if state_dict.get("appointment_id"):
+        rows_html += (
+            f'<div class="booking-row">'
+            f'<span class="bkey">Appt ID</span>'
+            f'<span class="bval" style="color:#059669;font-size:11px;">'
+            f'{state_dict["appointment_id"]}</span></div>'
+        )
 
     if rows_html:
         st.markdown(f'<div class="booking-card">{rows_html}</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="booking-card"><span class="bval-pending" '
-                    'style="font-size:12px;">Collecting info...</span></div>',
-                    unsafe_allow_html=True)
+        st.markdown(
+            '<div class="booking-card"><span class="bval-pending" '
+            'style="font-size:12px;">Collecting info...</span></div>',
+            unsafe_allow_html=True,
+        )
 
 
 def render_workflow_status(complete: bool, success: bool = False, error: str = "") -> None:
@@ -584,12 +622,15 @@ def render_workflow_status(complete: bool, success: bool = False, error: str = "
         return
     st.divider()
     if success:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="success-banner">
             <h3>✅ Appointment Confirmed!</h3>
             <p>Check Booking Status for your appointment ID.</p>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
     elif error:
         st.error(f"❌ {error}")
     else:
@@ -597,7 +638,7 @@ def render_workflow_status(complete: bool, success: bool = False, error: str = "
 
 
 # ─── AVAILABLE SLOTS ─────────────────────────────────────────────────────────
-def render_available_slots(slots: List[str]) -> None:
+def render_available_slots(slots: list[str]) -> None:
     """Display available time slots as pills."""
     if not slots:
         return
@@ -613,50 +654,57 @@ def format_agent_output(output: str) -> str:
     """Clean up raw agent output — remove banners, ASCII art, extra blanks."""
     if not output:
         return ""
-    lines = output.split('\n')
+    lines = output.split("\n")
     cleaned, prev_blank = [], False
     for line in lines:
         stripped = line.strip()
         if not stripped:
             if not prev_blank:
-                cleaned.append('')
+                cleaned.append("")
                 prev_blank = True
             continue
         prev_blank = False
-        if all(c in '=-_*' for c in stripped):
+        if all(c in "=-_*" for c in stripped):
             continue
-        if stripped.startswith('🏥') and 'Scheduler' in stripped:
+        if stripped.startswith("🏥") and "Scheduler" in stripped:
             continue
         cleaned.append(stripped)
-    return '\n'.join(cleaned).strip()
+    return "\n".join(cleaned).strip()
 
 
 def render_typing_indicator() -> None:
     """Show animated typing dots in chat."""
-    st.markdown("""
+    st.markdown(
+        """
     <div class="typing-indicator">
         <div class="avatar-bot">🤖</div>
         <div class="typing-dots">
             <span></span><span></span><span></span>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
+
 
 # ─── RIGHT PANEL (always visible) ────────────────────────────────────────────
-def render_right_panel(state_dict: Dict, manager) -> None:
+def render_right_panel(state_dict: dict, manager) -> None:
     """Right panel — progress + booking summary. Always visible."""
-    
-    current_step = state_dict.get('current_step', 'greeting')
+
+    current_step = state_dict.get("current_step", "greeting")
     current_idx = STEP_KEYS.index(current_step) if current_step in STEP_KEYS else 0
     pct = int((current_idx / len(STEPS)) * 100)
 
-    st.markdown("""
+    st.markdown(
+        """
     <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;
                 letter-spacing:0.1em;margin-bottom:10px;
                 font-family:'Geist Sans',sans-serif;">
         Your Progress
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     for i, (key, label) in enumerate(STEPS):
         if i < current_idx:
@@ -668,11 +716,12 @@ def render_right_panel(state_dict: Dict, manager) -> None:
             bg, border = "rgba(124,58,237,0.08)", "rgba(124,58,237,0.3)"
             color, weight = "#1a1a2e", "600"
         else:
-            icon, icon_color = str(i+1), "#cbd5e1"
+            icon, icon_color = str(i + 1), "#cbd5e1"
             bg, border = "transparent", "transparent"
             color, weight = "#cbd5e1", "400"
 
-        st.markdown(f"""
+        st.markdown(
+            f"""
         <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
                     margin-bottom:3px;border-radius:8px;background:{bg};
                     border:1px solid {border};">
@@ -684,10 +733,13 @@ def render_right_panel(state_dict: Dict, manager) -> None:
             <div style="font-size:12px;color:{color};font-weight:{weight};
                         font-family:'Geist Sans',sans-serif;">{label}</div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     # Progress bar
-    st.markdown(f"""
+    st.markdown(
+        f"""
     <div style="margin:10px 0 16px;">
         <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
             <div style="font-size:10px;color:#94a3b8;">Step {current_idx+1} of {len(STEPS)}</div>
@@ -700,23 +752,28 @@ def render_right_panel(state_dict: Dict, manager) -> None:
         </div>
     </div>
     <hr style="border-color:#f1f5f9;margin:0 0 12px;">
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     # Booking summary
-    st.markdown("""
+    st.markdown(
+        """
     <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;
                 letter-spacing:0.1em;margin-bottom:8px;
                 font-family:'Geist Sans',sans-serif;">
         Booking Summary
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     fields = [
-        ("👤 Patient",   state_dict.get('patient_name', '')),
-        ("👨‍⚕️ Doctor",   state_dict.get('preferred_doctor', '')),
-        ("📅 Date",      state_dict.get('appointment_date', '')),
-        ("🕐 Time",      state_dict.get('selected_time', '')),
-        ("🏥 Insurance", state_dict.get('insurance_carrier', '')),
+        ("👤 Patient", state_dict.get("patient_name", "")),
+        ("👨‍⚕️ Doctor", state_dict.get("preferred_doctor", "")),
+        ("📅 Date", state_dict.get("appointment_date", "")),
+        ("🕐 Time", state_dict.get("selected_time", "")),
+        ("🏥 Insurance", state_dict.get("insurance_carrier", "")),
     ]
     rows = ""
     for label, val in fields:
@@ -728,9 +785,9 @@ def render_right_panel(state_dict: Dict, manager) -> None:
             f'<span style="font-size:11px;color:#94a3b8;">{label}</span>'
             f'<span style="font-size:11px;color:{vc};font-weight:500;'
             f'text-align:right;max-width:100px;word-break:break-word;">{v}</span>'
-            f'</div>'
+            f"</div>"
         )
-    if state_dict.get('appointment_id'):
+    if state_dict.get("appointment_id"):
         rows += (
             f'<div style="display:flex;justify-content:space-between;padding:5px 0;">'
             f'<span style="font-size:11px;color:#94a3b8;">🎫 ID</span>'
@@ -741,21 +798,23 @@ def render_right_panel(state_dict: Dict, manager) -> None:
     st.markdown(
         f'<div style="background:#f8fafc;border-radius:10px;padding:10px 12px;'
         f'border:1px solid #e2e8f0;">{rows}</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
-    if state_dict.get('booking_confirmed'):
-        st.markdown("""
+    if state_dict.get("booking_confirmed"):
+        st.markdown(
+            """
         <div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;
                     padding:8px 12px;margin-top:10px;text-align:center;">
             <div style="font-size:12px;color:#059669;font-weight:600;">
                 ✔ Appointment Confirmed!
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """,
+            unsafe_allow_html=True,
+        )
 
     st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
     if st.button("🔄 New Conversation", use_container_width=True, key="right_new_conv"):
-        st.session_state.pop('session_manager', None)
+        st.session_state.pop("session_manager", None)
         st.rerun()
-

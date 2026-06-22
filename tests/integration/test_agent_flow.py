@@ -3,10 +3,12 @@ tests/integration/test_agent_flow.py
 End-to-end integration test of LangGraph agent with mocked LLM.
 Tests the full conversation → booking → reminder → form pipeline.
 """
-import pytest
-import sys
+
 import os
-from unittest.mock import patch, MagicMock
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
@@ -35,12 +37,14 @@ class TestAgentGraphCompilation:
     def test_graph_compiles(self):
         """Graph should compile without errors."""
         from agents.graph import create_scheduling_graph
+
         graph = create_scheduling_graph()
         assert graph is not None
 
     def test_graph_has_expected_nodes(self):
         """Compiled graph should have all 4 nodes."""
         from agents.graph import create_scheduling_graph
+
         graph = create_scheduling_graph()
         # LangGraph compiled graph exposes nodes
         assert graph is not None
@@ -56,6 +60,7 @@ class TestConversationNodeMocked:
 
             try:
                 from agents.nodes.conversation_node import conversation_node
+
                 result = conversation_node(base_state)
                 # Should return a dict (state update)
                 assert isinstance(result, dict)
@@ -78,6 +83,7 @@ class TestConversationNodeMocked:
 
             try:
                 from agents.nodes.conversation_node import conversation_node
+
                 result = conversation_node(state)
                 assert isinstance(result, dict)
             except Exception:
@@ -87,8 +93,10 @@ class TestConversationNodeMocked:
 class TestPromptLoader:
     def test_all_prompts_loadable(self):
         """All .txt prompt files should be readable."""
-        from utils.prompt_loader import load_prompt
         import os
+
+        from utils.prompt_loader import load_prompt
+
         prompts_dir = os.path.join(os.path.dirname(__file__), "../../prompts")
         prompt_files = [f for f in os.listdir(prompts_dir) if f.endswith(".txt")]
         assert len(prompt_files) > 0, "No prompt files found"
@@ -100,5 +108,6 @@ class TestPromptLoader:
     def test_missing_prompt_handled_gracefully(self):
         """Missing prompt file should return empty string, not crash."""
         from utils.prompt_loader import load_prompt
+
         result = load_prompt("nonexistent_prompt.txt")
         assert result == "" or result is None  # Graceful handling

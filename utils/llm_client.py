@@ -3,11 +3,9 @@ LLM Client — Multi-provider support.
 Supports: Groq, Gemini, OpenAI
 Auto-selects based on LLM_PROVIDER env var.
 """
+
 import json
 import logging
-import os
-from typing import Dict, Any, Optional, Tuple
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +15,7 @@ class LLMClient:
 
     def __init__(self):
         from utils.config import Config
+
         self.config = Config
         self.provider = Config.get_active_provider()
         self.model = Config.get_active_model()
@@ -27,20 +26,23 @@ class LLMClient:
     def _init_client(self):
         """Initialize the appropriate LLM client."""
         try:
-            if self.provider == 'groq':
+            if self.provider == "groq":
                 from groq import Groq
+
                 self.client = Groq(api_key=self.config.GROQ_API_KEY)
                 self.enabled = True
                 logger.info(f"LLM: Groq initialized with model {self.model}")
 
-            elif self.provider == 'gemini':
+            elif self.provider == "gemini":
                 from google import genai
+
                 self.client = genai.Client(api_key=self.config.GEMINI_API_KEY)
                 self.enabled = True
                 logger.info(f"LLM: Gemini initialized with model {self.model}")
 
-            elif self.provider == 'openai':
+            elif self.provider == "openai":
                 from openai import OpenAI
+
                 self.client = OpenAI(api_key=self.config.OPENAI_API_KEY)
                 self.enabled = True
                 logger.info(f"LLM: OpenAI initialized with model {self.model}")
@@ -56,7 +58,7 @@ class LLMClient:
             logger.error(f"LLM client init failed: {e}")
             self.enabled = False
 
-    def chat(self, prompt: str, system: str = "") -> Optional[str]:
+    def chat(self, prompt: str, system: str = "") -> str | None:
         """
         Send a chat message and get response text.
         Works with any provider.
@@ -65,7 +67,7 @@ class LLMClient:
             return None
 
         try:
-            if self.provider == 'groq':
+            if self.provider == "groq":
                 messages = []
                 if system:
                     messages.append({"role": "system", "content": system})
@@ -74,19 +76,16 @@ class LLMClient:
                     model=self.model,
                     messages=messages,
                     temperature=self.config.LLM_TEMPERATURE,
-                    max_tokens=self.config.LLM_MAX_TOKENS
+                    max_tokens=self.config.LLM_MAX_TOKENS,
                 )
                 return response.choices[0].message.content
 
-            elif self.provider == 'gemini':
+            elif self.provider == "gemini":
                 full = f"{system}\n\n{prompt}" if system else prompt
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=full
-                )
+                response = self.client.models.generate_content(model=self.model, contents=full)
                 return response.text
 
-            elif self.provider == 'openai':
+            elif self.provider == "openai":
                 messages = []
                 if system:
                     messages.append({"role": "system", "content": system})
@@ -95,7 +94,7 @@ class LLMClient:
                     model=self.model,
                     messages=messages,
                     temperature=self.config.LLM_TEMPERATURE,
-                    max_tokens=self.config.LLM_MAX_TOKENS
+                    max_tokens=self.config.LLM_MAX_TOKENS,
                 )
                 return response.choices[0].message.content
 
@@ -103,7 +102,7 @@ class LLMClient:
             logger.error(f"LLM call failed ({self.provider}): {e}")
             return None
 
-    def chat_json(self, prompt: str, system: str = "") -> Optional[Dict]:
+    def chat_json(self, prompt: str, system: str = "") -> dict | None:
         """Send prompt and parse JSON response."""
         response_text = self.chat(prompt, system)
         if not response_text:
@@ -122,10 +121,11 @@ class LLMClient:
 
             # Remove control characters that break JSON parsing
             import re
-            text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+
+            text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
 
             # Find JSON object if there's extra text around it
-            json_match = re.search(r'\{.*\}', text, re.DOTALL)
+            json_match = re.search(r"\{.*\}", text, re.DOTALL)
             if json_match:
                 text = json_match.group(0)
 
@@ -136,8 +136,9 @@ class LLMClient:
             # Try one more time with aggressive cleaning
             try:
                 import re
-                text = re.sub(r'[\x00-\x1f\x7f]', ' ', response_text)
-                json_match = re.search(r'\{.*\}', text, re.DOTALL)
+
+                text = re.sub(r"[\x00-\x1f\x7f]", " ", response_text)
+                json_match = re.search(r"\{.*\}", text, re.DOTALL)
                 if json_match:
                     return json.loads(json_match.group(0))
             except Exception:
@@ -149,7 +150,7 @@ class LLMClient:
 
 
 # Singleton
-_client: Optional[LLMClient] = None
+_client: LLMClient | None = None
 
 
 def get_llm_client() -> LLMClient:

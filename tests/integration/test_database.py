@@ -4,24 +4,25 @@ Integration tests for the PostgreSQL database layer.
 Requires a real PostgreSQL connection (set via env vars).
 Skipped automatically if DB is unavailable.
 """
-import pytest
+
 import os
-import uuid
 import sys
+import uuid
+
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 # Skip entire module if no real DB configured
 DB_AVAILABLE = bool(os.getenv("DATABASE_URL") or os.getenv("DB_HOST"))
-pytestmark = pytest.mark.skipif(
-    not DB_AVAILABLE, reason="No database configured"
-)
+pytestmark = pytest.mark.skipif(not DB_AVAILABLE, reason="No database configured")
 
 
 @pytest.fixture(scope="module")
 def db_connection():
     """Create a test DB connection and ensure schema exists."""
-    from database.db import get_connection, create_tables
+    from database.db import create_tables, get_connection
+
     try:
         create_tables()
         conn = get_connection()
@@ -39,7 +40,8 @@ def test_patient_id():
 class TestPatientOperations:
     def test_save_and_retrieve_appointment(self, db_connection, test_patient_id):
         """Appointment saved to DB can be retrieved."""
-        from database.db import save_appointment, get_appointment_by_id
+        from database.db import save_appointment
+
         appt_data = {
             "patient_id": test_patient_id,
             "patient_name": "Test Patient",
@@ -56,6 +58,7 @@ class TestPatientOperations:
     def test_duplicate_patient_handled_gracefully(self, db_connection, test_patient_id):
         """Saving same patient twice should not crash."""
         from database.db import save_appointment
+
         appt_data = {
             "patient_id": test_patient_id,
             "patient_name": "Test Patient",
@@ -73,10 +76,12 @@ class TestDatabaseSchema:
     def test_tables_created(self, db_connection):
         """Core tables should exist after schema init."""
         cur = db_connection.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             SELECT table_name FROM information_schema.tables
             WHERE table_schema = 'public'
-        """)
+        """
+        )
         tables = [row[0] for row in cur.fetchall()]
         cur.close()
         # At minimum, appointments or patients table should exist

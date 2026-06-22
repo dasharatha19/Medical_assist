@@ -7,9 +7,9 @@ Covers:
   - Input length limits
   - PII redaction for logs
 """
-import re
+
 import logging
-from typing import Tuple
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,8 @@ _INJECTION_PATTERNS = [
     r"act\s+as\s+(a|an|if)",
     r"pretend\s+(you\s+are|to\s+be)",
     r"jailbreak",
-    r"DAN\b",              # "Do Anything Now" jailbreak
-    r"<\s*script",         # XSS attempt
+    r"DAN\b",  # "Do Anything Now" jailbreak
+    r"<\s*script",  # XSS attempt
     r"system\s*prompt",
     r"reveal\s+(your\s+)?(system\s+)?prompt",
     r"repeat\s+everything\s+above",
@@ -31,10 +31,10 @@ _INJECTION_PATTERNS = [
 
 _COMPILED_PATTERNS = [re.compile(p, re.IGNORECASE) for p in _INJECTION_PATTERNS]
 
-MAX_INPUT_LENGTH = 1000   # Characters — reasonable for a scheduling chatbot
+MAX_INPUT_LENGTH = 1000  # Characters — reasonable for a scheduling chatbot
 
 
-def sanitize_user_input(text: str) -> Tuple[str, bool]:
+def sanitize_user_input(text: str) -> tuple[str, bool]:
     """
     Sanitize user input. Returns (sanitized_text, was_flagged).
 
@@ -55,18 +55,18 @@ def sanitize_user_input(text: str) -> Tuple[str, bool]:
         text = text[:MAX_INPUT_LENGTH]
 
     # 2. Strip control characters (except newlines which are valid)
-    text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
 
     # 3. Strip HTML/script tags
-    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r"<[^>]+>", "", text)
 
     # 4. Check for injection patterns
     flagged = False
     for pattern in _COMPILED_PATTERNS:
         if pattern.search(text):
             logger.warning(
-                f"Potential prompt injection detected",
-                extra={"pattern": pattern.pattern, "input_snippet": text[:100]}
+                "Potential prompt injection detected",
+                extra={"pattern": pattern.pattern, "input_snippet": text[:100]},
             )
             flagged = True
             break
@@ -80,15 +80,19 @@ def redact_pii_for_log(data: dict) -> dict:
     Safe to pass to loggers.
     """
     REDACT_FIELDS = {
-        "patient_email", "patient_phone", "patient_dob",
-        "insurance_member_id", "insurance_group_id",
-        "patient_id", "groq_api_key", "gemini_api_key",
-        "openai_api_key", "api_key", "password",
+        "patient_email",
+        "patient_phone",
+        "patient_dob",
+        "insurance_member_id",
+        "insurance_group_id",
+        "patient_id",
+        "groq_api_key",
+        "gemini_api_key",
+        "openai_api_key",
+        "api_key",
+        "password",
     }
-    return {
-        k: "***" if k in REDACT_FIELDS else v
-        for k, v in data.items()
-    }
+    return {k: "***" if k in REDACT_FIELDS else v for k, v in data.items()}
 
 
 def validate_api_key_format(key: str, provider: str) -> bool:

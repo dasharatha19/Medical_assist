@@ -1,6 +1,6 @@
 # conftest.py — root-level pytest configuration
-import sys
 import os
+import sys
 
 # Ensure project root is on the path for all tests
 sys.path.insert(0, os.path.dirname(__file__))

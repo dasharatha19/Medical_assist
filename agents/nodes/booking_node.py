@@ -2,9 +2,11 @@
 Booking Node — executes booking after conversation_node confirms.
 Correct order: book slot first → then save to DB → then report.
 """
+
 import logging
-from tools import tools
+
 from services import report_service
+from tools import tools
 
 logger = logging.getLogger(__name__)
 
@@ -19,16 +21,17 @@ def booking_node(state: dict) -> dict:
             doctor=state.get("preferred_doctor"),
             date=state.get("appointment_date"),
             time=state.get("selected_time"),
-            duration=state.get("appointment_duration", 60)
+            duration=state.get("appointment_duration", 60),
         )
 
         if result.get("success"):
-            state["appointment_id"]   = result.get("appointment_id")
-            state["booking_success"]  = True
+            state["appointment_id"] = result.get("appointment_id")
+            state["booking_success"] = True
 
             # ── Step 2: Save to DB AFTER slot is reserved ─────────────────────
             try:
                 from database.db import save_appointment
+
                 save_appointment(state)
                 state["db_saved"] = True
                 logger.info(f"Appointment saved: {state['appointment_id']}")
@@ -52,7 +55,7 @@ def booking_node(state: dict) -> dict:
             )
 
         else:
-            state["booking_success"]  = False
+            state["booking_success"] = False
             state["workflow_complete"] = True
             state["response"] = (
                 f"❌ Booking failed: {result.get('error')}\n\n"
@@ -62,7 +65,7 @@ def booking_node(state: dict) -> dict:
 
     except Exception as e:
         logger.error(f"Booking error: {e}")
-        state["booking_success"]  = False
+        state["booking_success"] = False
         state["workflow_complete"] = True
         state["response"] = f"❌ Booking error: {str(e)}"
 

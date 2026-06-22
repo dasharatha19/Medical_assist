@@ -2,7 +2,7 @@
 Appointment Scheduler Agent State
 TypedDict-based state for LangGraph compatibility
 """
-from typing import Optional, List
+
 from typing_extensions import TypedDict
 
 
@@ -22,7 +22,7 @@ class SchedulerState(TypedDict, total=False):
     # Scheduling Information
     preferred_doctor: str
     appointment_date: str
-    available_slots: List[str]
+    available_slots: list[str]
     selected_slot: str
     selected_time: str
 
@@ -95,11 +95,11 @@ class SchedulerState(TypedDict, total=False):
     patient_email_validated: bool
 
     # ── Intelligent Agent Fields ──
-    conversation_phase: str      # "greeting"|"collecting"|"scheduling"|"insurance"|"confirming"|"done"
-    intent: str                  # last detected intent from Gemini
-    missing_fields: list         # list of fields still needed
-    conversation_context: list   # full conversation for Gemini context
-    db_saved: bool               # whether appointment saved to DB
+    conversation_phase: str  # "greeting"|"collecting"|"scheduling"|"insurance"|"confirming"|"done"
+    intent: str  # last detected intent from Gemini
+    missing_fields: list  # list of fields still needed
+    conversation_context: list  # full conversation for Gemini context
+    db_saved: bool  # whether appointment saved to DB
 
     # Session isolation
     session_id: str

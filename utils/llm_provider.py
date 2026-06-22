@@ -3,10 +3,9 @@ Universal LLM Provider
 Auto-detects available API keys and uses the right provider.
 Set LLM_PROVIDER=auto in .env to auto-detect, or force a specific one.
 """
-import os
-import json
+
 import logging
-from typing import Optional
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +45,7 @@ class LLMProvider:
                 if not api_key:
                     return False
                 from groq import Groq
+
                 self.client = Groq(api_key=api_key)
                 self.provider = "groq"
                 self.model = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
@@ -57,6 +57,7 @@ class LLMProvider:
                 if not api_key:
                     return False
                 from google import genai
+
                 self.client = genai.Client(api_key=api_key)
                 self.provider = "gemini"
                 self.model = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
@@ -68,6 +69,7 @@ class LLMProvider:
                 if not api_key:
                     return False
                 from openai import OpenAI
+
                 self.client = OpenAI(api_key=api_key)
                 self.provider = "openai"
                 self.model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
@@ -79,6 +81,7 @@ class LLMProvider:
                 if not api_key:
                     return False
                 import anthropic
+
                 self.client = anthropic.Anthropic(api_key=api_key)
                 self.provider = "anthropic"
                 self.model = os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
@@ -92,7 +95,7 @@ class LLMProvider:
 
         return False
 
-    def generate(self, prompt: str, max_tokens: int = 1000) -> Optional[str]:
+    def generate(self, prompt: str, max_tokens: int = 1000) -> str | None:
         """Generate text using whichever provider is active."""
         if not self.enabled:
             return None
@@ -103,15 +106,12 @@ class LLMProvider:
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=max_tokens,
-                    temperature=0.3
+                    temperature=0.3,
                 )
                 return response.choices[0].message.content
 
             elif self.provider == "gemini":
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=prompt
-                )
+                response = self.client.models.generate_content(model=self.model, contents=prompt)
                 return response.text
 
             elif self.provider == "openai":
@@ -119,7 +119,7 @@ class LLMProvider:
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=max_tokens,
-                    temperature=0.3
+                    temperature=0.3,
                 )
                 return response.choices[0].message.content
 
@@ -127,7 +127,7 @@ class LLMProvider:
                 response = self.client.messages.create(
                     model=self.model,
                     max_tokens=max_tokens,
-                    messages=[{"role": "user", "content": prompt}]
+                    messages=[{"role": "user", "content": prompt}],
                 )
                 return response.content[0].text
 
@@ -140,7 +140,7 @@ class LLMProvider:
 
 
 # Singleton
-_provider_instance: Optional[LLMProvider] = None
+_provider_instance: LLMProvider | None = None
 
 
 def get_llm_provider() -> LLMProvider:
