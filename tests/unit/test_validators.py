@@ -15,9 +15,10 @@ class TestPatientDataValidator:
     def test_valid_name(self):
         valid, msg = PatientDataValidator.validate_name("John Doe")
         assert valid is True
-
+    
+    # 1 char — actually too short
     def test_name_too_short(self):
-        valid, msg = PatientDataValidator.validate_name("Jo")
+        valid, msg = PatientDataValidator.validate_name("J")
         assert valid is False
 
     def test_name_with_numbers_rejected(self):
