@@ -96,9 +96,3 @@ websockets>=13.0,<15.0
 xxhash==3.7.0
 zstandard==0.25.0
 supabase==2.15.1
-ruff==0.4.4
-black==24.4.2
-isort==5.13.2
-pytest==8.2.0
-pytest-cov==5.0.0
-pytest-mock==3.14.0
