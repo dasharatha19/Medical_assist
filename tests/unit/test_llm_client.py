@@ -32,11 +32,13 @@ class TestConfig:
         monkeypatch.setenv("LLM_PROVIDER", "auto")
         monkeypatch.setattr("dotenv.load_dotenv", lambda **kwargs: None)
         import importlib
+
         import utils.config
+
         importlib.reload(utils.config)
         from utils.config import Config
+
         assert Config.get_active_provider() == "none"
-    
 
     def test_llm_disabled_when_no_keys(self, monkeypatch):
         monkeypatch.delenv("GROQ_API_KEY", raising=False)
@@ -45,10 +47,14 @@ class TestConfig:
         monkeypatch.setenv("LLM_PROVIDER", "auto")
         monkeypatch.setattr("dotenv.load_dotenv", lambda **kwargs: None)  # ← ADD THIS
         import importlib
+
         import utils.config
+
         importlib.reload(utils.config)
         from utils.config import Config
+
         assert Config.is_llm_enabled() is False
+
 
 class TestLLMClientMocked:
     def test_chat_returns_none_when_disabled(self):

@@ -13,11 +13,7 @@ from pathlib import Path
 from tools import tools
 from utils.config import Config
 from utils.llm_client import get_llm_client
-from utils.validators import (
-    ContactValidator,
-    PatientDataValidator,
-    SchedulingValidator,
-)
+from utils.validators import ContactValidator, PatientDataValidator, SchedulingValidator
 from utils.verbose_logger import verbose
 
 logger = logging.getLogger(__name__)

@@ -76,10 +76,12 @@ class TestDatabaseSchema:
     def test_tables_created(self, db_connection):
         """Core tables should exist after schema init."""
         cur = db_connection.cursor()
-        cur.execute("""
+        cur.execute(
+            """
             SELECT table_name FROM information_schema.tables
             WHERE table_schema = 'public'
-        """)
+        """
+        )
         tables = [row[0] for row in cur.fetchall()]
         cur.close()
         # At minimum, appointments or patients table should exist

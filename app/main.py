@@ -656,7 +656,8 @@ def main():
         with st.container():
             if "show_appt_summary" in st.session_state:
                 appt = st.session_state.pop("show_appt_summary")
-                st.markdown(f"""
+                st.markdown(
+                    f"""
                 ### 📋 Appointment Summary
                 | Field | Details |
                 |---|---|
@@ -666,7 +667,8 @@ def main():
                 | **Time** | {appt.get('appointment_time','')} |
                 | **Status** | {appt.get('status','')} |
                 | **Appt ID** | {appt.get('appointment_id','')} |
-                """)
+                """
+                )
                 st.stop()
             render_chat_section(manager)
             if (

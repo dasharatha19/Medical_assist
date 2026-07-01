@@ -60,7 +60,8 @@ def create_database_if_not_exists():
 def create_tables():
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS patients (
             patient_id        TEXT PRIMARY KEY,
             first_name        TEXT,
@@ -183,7 +184,8 @@ def create_tables():
             status              TEXT DEFAULT 'pending',
             session_id          TEXT DEFAULT ''
         );
-    """)
+    """
+    )
     conn.commit()
     cur.close()
     conn.close()
@@ -361,13 +363,15 @@ def register_new_patient(data: dict) -> str:
 def get_all_doctors() -> list:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-    cur.execute("""
+    cur.execute(
+        """
         SELECT doctor_id, name, specialization,
                location, working_hours, break_time,
                COALESCE(conditions, '') as conditions
         FROM doctors
         ORDER BY name
-        """)
+        """
+    )
     rows = cur.fetchall()
     cur.close()
     conn.close()
@@ -494,10 +498,12 @@ def migrate_add_conditions():
     """Add conditions column if it doesn't exist yet."""
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         ALTER TABLE doctors
         ADD COLUMN IF NOT EXISTS conditions TEXT
-    """)
+    """
+    )
     # Update conditions for existing doctors
     conditions_map = {
         "DR_Dr_John_Smith": "common cold, fever, flu, headache, general checkup, fatigue, "
@@ -524,10 +530,12 @@ def migrate_add_conditions():
 def migrate_add_session_id():
     conn = get_connection()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         ALTER TABLE appointments
         ADD COLUMN IF NOT EXISTS session_id TEXT DEFAULT ''
-    """)
+    """
+    )
     conn.commit()
     cur.close()
     conn.close()
