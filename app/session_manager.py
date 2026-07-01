@@ -9,7 +9,6 @@ from database.db import initialize_database
 
 
 class SessionManager:
-
     def __init__(self):
         initialize_database()
         self.conversation_history: list[dict[str, str]] = []

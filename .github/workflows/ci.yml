@@ -25,15 +25,15 @@ jobs:
           cache: pip
 
       - name: Install lint tools
-        run: pip install ruff black isort
+        run: pip install ruff isort
 
-      - name: Run Ruff (linter)
+      - name: Run Ruff linter
         run: ruff check . --output-format=github
 
-      - name: Run Black (formatter check)
-        run: black --check --diff .
+      - name: Run Ruff formatter check
+        run: ruff format --check .
 
-      - name: Run isort (import order)
+      - name: Run isort
         run: isort --check-only --diff .
 
   # ─────────────────────────────────────────────────

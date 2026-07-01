@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 def reminder_node(state: SchedulerState) -> SchedulerState:
-
     if not state.get("booking_confirmed"):
         state["workflow_complete"] = True
         state["booking_success"] = False

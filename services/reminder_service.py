@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class ReminderService:
-
     def setup_appointment_reminders(
         self, appointment_id: str, appointment_datetime: str, email: str, phone: str
     ) -> dict:

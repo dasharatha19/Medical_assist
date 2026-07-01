@@ -11,26 +11,34 @@ exclude = [
 
 [tool.ruff.lint]
 select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "B",   # flake8-bugbear
-    "UP",  # pyupgrade
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "UP",
 ]
 ignore = [
-    "E501",  # line too long — handled by black
-    "B008",  # function call in default arg
-    "B904",  # raise from — optional
+    "E501",
+    "B008",
+    "B904",
     "B007",
     "E731",
     "I001",
 ]
 
-[tool.black]
-line-length = 100
-target-version = ["py311"]
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+docstring-code-format = true
 
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

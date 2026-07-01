@@ -138,7 +138,9 @@ class ExcelReportGenerator:
             # Format header cells
             cell.font = Font(bold=True, color="FFFFFF")  # White text
             cell.fill = PatternFill(
-                start_color="366092", end_color="366092", fill_type="solid"  # Dark blue
+                start_color="366092",
+                end_color="366092",
+                fill_type="solid",  # Dark blue
             )
             cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 

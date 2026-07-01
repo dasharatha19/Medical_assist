@@ -7,7 +7,6 @@ from typing_extensions import TypedDict
 
 
 class SchedulerState(TypedDict, total=False):
-
     # Patient Information
     patient_name: str
     patient_dob: str

@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class PatientService:
-
     def lookup_patient(self, name: str, dob: str) -> dict:
         try:
             from database.db import lookup_patient, register_new_patient

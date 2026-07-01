@@ -21,7 +21,6 @@ VALID_CARRIERS = [
 
 
 class NotificationTool:
-
     def collect_insurance(
         self, patient_id: str, carrier: str, member_id: str, group_id: str
     ) -> dict:

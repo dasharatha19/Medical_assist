@@ -289,7 +289,9 @@ def seed_doctors():
                     status = (
                         "available"
                         if raw == "available"
-                        else "break" if raw == "break" else "unavailable"
+                        else "break"
+                        if raw == "break"
+                        else "unavailable"
                     )
                 except Exception:
                     status = "unavailable"
