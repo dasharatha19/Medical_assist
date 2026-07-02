@@ -94,6 +94,7 @@ class TestPromptLoader:
     def test_all_prompts_loadable(self):
         """All .txt prompt files should be readable."""
         import os
+        from pathlib import Path
 
         from utils.prompt_loader import load_prompt
 
@@ -102,12 +103,13 @@ class TestPromptLoader:
         assert len(prompt_files) > 0, "No prompt files found"
 
         for pf in prompt_files:
-            content = load_prompt(pf)
+            name = Path(pf).stem  # "scheduling_prompt.txt" → "scheduling_prompt"
+            content = load_prompt(name)
             assert isinstance(content, str), f"Prompt {pf} did not return string"
 
-    def test_missing_prompt_handled_gracefully(self):
-        """Missing prompt file should return empty string, not crash."""
+    def test_missing_prompt_raises_file_not_found(self):
+        """Missing prompt file should raise FileNotFoundError — this is the loader's actual contract."""
         from utils.prompt_loader import load_prompt
 
-        result = load_prompt("nonexistent_prompt.txt")
-        assert result == "" or result is None  # Graceful handling
+        with pytest.raises(FileNotFoundError):
+            load_prompt("nonexistent_prompt")
