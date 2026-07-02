@@ -23,9 +23,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-
+      
       - name: Install lint tools
-        run: pip install ruff isort
+        run: pip install -r requirements-dev.txt
 
       - name: Run Ruff linter
         run: ruff check . --output-format=github
