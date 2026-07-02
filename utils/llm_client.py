@@ -82,7 +82,9 @@ class LLMClient:
 
             elif self.provider == "gemini":
                 full = f"{system}\n\n{prompt}" if system else prompt
-                response = self.client.models.generate_content(model=self.model, contents=full)
+                response = self.client.models.generate_content(
+                    model=self.model, contents=full
+                )
                 return response.text
 
             elif self.provider == "openai":

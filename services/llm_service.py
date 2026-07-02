@@ -74,7 +74,9 @@ class LLMService:
 
                 if success and self._has_patient_fields(fields):
                     self.llm_successes += 1
-                    logger.info("Gemini successfully extracted patient fields from input")
+                    logger.info(
+                        "Gemini successfully extracted patient fields from input"
+                    )
                     return True, fields
 
             except Exception as e:
@@ -157,7 +159,9 @@ class LLMService:
 
                 insurance_fields = {}
                 if fields.get("insurance_provider"):
-                    insurance_fields["insurance_provider"] = fields["insurance_provider"]
+                    insurance_fields["insurance_provider"] = fields[
+                        "insurance_provider"
+                    ]
                 if fields.get("insurance_id"):
                     insurance_fields["insurance_id"] = fields["insurance_id"]
 
@@ -175,7 +179,14 @@ class LLMService:
                 self.fallback_uses += 1
 
             # Simple rule-based extraction
-            insurance_keywords = ["insurance", "provider", "aetna", "blue cross", "anthem", "cigna"]
+            insurance_keywords = [
+                "insurance",
+                "provider",
+                "aetna",
+                "blue cross",
+                "anthem",
+                "cigna",
+            ]
             for keyword in insurance_keywords:
                 if keyword.lower() in user_input.lower():
                     # Extract context around keyword
@@ -186,7 +197,9 @@ class LLMService:
 
         return False, {}
 
-    def _parse_patient_info_rulebased(self, user_input: str) -> tuple[bool, dict[str, Any]]:
+    def _parse_patient_info_rulebased(
+        self, user_input: str
+    ) -> tuple[bool, dict[str, Any]]:
         """
         Rule-based patient information parsing (fallback)
 

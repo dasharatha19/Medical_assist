@@ -142,7 +142,9 @@ class ExcelReportGenerator:
                 end_color="366092",
                 fill_type="solid",  # Dark blue
             )
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+            cell.alignment = Alignment(
+                horizontal="center", vertical="center", wrap_text=True
+            )
 
     def _get_next_record_id(self, worksheet) -> int:
         """
@@ -183,7 +185,9 @@ class ExcelReportGenerator:
 
             # Alternate row colors for readability
             if row_idx % 2 == 0:
-                cell.fill = PatternFill(start_color="E8E8E8", end_color="E8E8E8", fill_type="solid")
+                cell.fill = PatternFill(
+                    start_color="E8E8E8", end_color="E8E8E8", fill_type="solid"
+                )
 
             # Add borders
             thin_border = Border(

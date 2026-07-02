@@ -17,7 +17,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 def mock_llm_response():
     """Mock LLM to return deterministic responses."""
     with patch("utils.llm_client.LLMClient.chat") as mock_chat:
-        mock_chat.return_value = '{"intent": "greeting", "response": "Hello! How can I help you?"}'
+        mock_chat.return_value = (
+            '{"intent": "greeting", "response": "Hello! How can I help you?"}'
+        )
         yield mock_chat
 
 

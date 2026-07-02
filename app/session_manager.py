@@ -114,13 +114,15 @@ class SessionManager:
                 "booking_success"
             ):
                 node_fn = booking_node
-            elif self.agent_state.get("current_step") == "reminders" and not self.agent_state.get(
-                "reminders_setup"
-            ):
+            elif self.agent_state.get(
+                "current_step"
+            ) == "reminders" and not self.agent_state.get("reminders_setup"):
                 node_fn = reminder_node
             elif self.agent_state.get(
                 "current_step"
-            ) == "form_distribution" and not self.agent_state.get("form_distribution_status"):
+            ) == "form_distribution" and not self.agent_state.get(
+                "form_distribution_status"
+            ):
                 node_fn = form_distribution_node
             else:
                 node_fn = conversation_node
@@ -147,7 +149,9 @@ class SessionManager:
 
             if self.agent_state.get(
                 "current_step"
-            ) == "form_distribution" and not self.agent_state.get("form_distribution_status"):
+            ) == "form_distribution" and not self.agent_state.get(
+                "form_distribution_status"
+            ):
                 self.agent_state["user_input"] = ""
                 result4 = form_distribution_node(self.agent_state)
                 self.agent_state.update(result4)

@@ -440,10 +440,17 @@ def render_chat_message(role: str, content: str) -> None:
         # Replace emoji with styled HTML symbols
         styled = (
             content.replace(
-                "✅", '<span style="color:#22c55e;font-size:15px;font-weight:700;">✔</span>'
+                "✅",
+                '<span style="color:#22c55e;font-size:15px;font-weight:700;">✔</span>',
             )
-            .replace("❌", '<span style="color:#ef4444;font-size:15px;font-weight:700;">✘</span>')
-            .replace("⚠️", '<span style="color:#f59e0b;font-size:15px;font-weight:700;">⚠</span>')
+            .replace(
+                "❌",
+                '<span style="color:#ef4444;font-size:15px;font-weight:700;">✘</span>',
+            )
+            .replace(
+                "⚠️",
+                '<span style="color:#f59e0b;font-size:15px;font-weight:700;">⚠</span>',
+            )
             .replace("🎉", "🎉")
             .replace("📋", "📋")
         )
@@ -462,7 +469,9 @@ def render_chat_history(messages: list[dict[str, str]]) -> None:
     """Render full conversation history."""
     st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
     for message in messages:
-        render_chat_message(message.get("role", "assistant"), message.get("content", ""))
+        render_chat_message(
+            message.get("role", "assistant"), message.get("content", "")
+        )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -473,7 +482,9 @@ def render_input_form() -> str | None:
         col_inp, col_btn = st.columns([5, 1])
         with col_inp:
             user_input = st.text_input(
-                "response", placeholder="Type your answer here...", label_visibility="collapsed"
+                "response",
+                placeholder="Type your answer here...",
+                label_visibility="collapsed",
             )
         with col_btn:
             submitted = st.form_submit_button("Send ↗", use_container_width=True)
@@ -540,7 +551,9 @@ def render_sidebar_info(state_dict: dict, manager=None) -> None:
                     appt_date = appt.get("appointment_date", "")
                     appt_id = appt.get("appointment_id", "")
                     label = f"👤 {name} · {doctor} · {appt_date}"
-                    if st.button(label, key=f"sidebar_appt_{appt_id}", use_container_width=True):
+                    if st.button(
+                        label, key=f"sidebar_appt_{appt_id}", use_container_width=True
+                    ):
                         st.session_state["viewed_appt"] = appt
                         st.rerun()
             else:
@@ -607,7 +620,9 @@ def render_state_info(state_dict: dict) -> None:
         )
 
     if rows_html:
-        st.markdown(f'<div class="booking-card">{rows_html}</div>', unsafe_allow_html=True)
+        st.markdown(
+            f'<div class="booking-card">{rows_html}</div>', unsafe_allow_html=True
+        )
     else:
         st.markdown(
             '<div class="booking-card"><span class="bval-pending" '
@@ -616,7 +631,9 @@ def render_state_info(state_dict: dict) -> None:
         )
 
 
-def render_workflow_status(complete: bool, success: bool = False, error: str = "") -> None:
+def render_workflow_status(
+    complete: bool, success: bool = False, error: str = ""
+) -> None:
     """Show workflow completion state."""
     if not complete:
         return

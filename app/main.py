@@ -135,7 +135,10 @@ def render_dob_picker(manager: SessionManager) -> bool:
             format="YYYY/MM/DD",
         )
         if st.button(
-            "✅ Confirm Date of Birth", use_container_width=True, key="dob_confirm", type="primary"
+            "✅ Confirm Date of Birth",
+            use_container_width=True,
+            key="dob_confirm",
+            type="primary",
         ):
             dob_str = selected.strftime("%Y-%m-%d")
             manager.add_message("user", dob_str)
@@ -161,13 +164,19 @@ def render_quick_replies(manager: SessionManager) -> bool:
     # ── Yes/No buttons ────────────────────────────────────────────────────────
     # Yes/No only for appointment confirmation — NOT for insurance question
     is_confirmation = any(
-        x in last_lower for x in ["shall i confirm", "confirm this appointment", "yes/no"]
+        x in last_lower
+        for x in ["shall i confirm", "confirm this appointment", "yes/no"]
     )
     is_insurance_question = any(
-        x in last_lower for x in ["out of pocket", "do you have insurance", "health insurance"]
+        x in last_lower
+        for x in ["out of pocket", "do you have insurance", "health insurance"]
     )
 
-    if is_confirmation and not is_insurance_question and not state.get("insurance_carrier"):
+    if (
+        is_confirmation
+        and not is_insurance_question
+        and not state.get("insurance_carrier")
+    ):
         pass  # don't show yes/no yet
     elif is_confirmation and not is_insurance_question:
         c1, c2 = st.columns(2)
@@ -219,7 +228,8 @@ def render_quick_replies(manager: SessionManager) -> bool:
         "group id",
     ]
     doctor_already_confirmed = (
-        state.get("preferred_doctor") and any(x in last_lower for x in personal_info_questions)
+        state.get("preferred_doctor")
+        and any(x in last_lower for x in personal_info_questions)
     ) or st.session_state.get("change_card_done", False)
     slots_already_shown = bool(state.get("available_slots"))
     asking_for_date = any(
@@ -250,9 +260,9 @@ def render_quick_replies(manager: SessionManager) -> bool:
         return False
 
     # ── Date selection ────────────────────────────────────────────────────────
-    if ("preferred date" in last_lower or "available dates" in last_lower) and not state.get(
-        "appointment_date"
-    ):
+    if (
+        "preferred date" in last_lower or "available dates" in last_lower
+    ) and not state.get("appointment_date"):
         import re
 
         dates = re.findall(r"\d{4}-\d{2}-\d{2}", last_msg)
@@ -268,7 +278,9 @@ def render_quick_replies(manager: SessionManager) -> bool:
                     except Exception:
                         label = f"📅 {d}"
                     with cols[i]:
-                        if st.button(label, use_container_width=True, key=f"qr_d_{row+i}"):
+                        if st.button(
+                            label, use_container_width=True, key=f"qr_d_{row+i}"
+                        ):
                             return _quick_reply(manager, d)
         return False
 
@@ -299,7 +311,9 @@ def render_quick_replies(manager: SessionManager) -> bool:
             cols = st.columns(min(len(slots), 4))
             for i, slot in enumerate(slots):
                 with cols[i % 4]:
-                    if st.button(f"🕐 {slot}", use_container_width=True, key=f"qr_s_{i}"):
+                    if st.button(
+                        f"🕐 {slot}", use_container_width=True, key=f"qr_s_{i}"
+                    ):
                         return _quick_reply(manager, slot)
             return False
 
@@ -395,7 +409,9 @@ def render_change_appointment_card(manager: SessionManager) -> bool:
         col1, col2 = st.columns(2)
         with col1:
             if st.button(
-                f"✅ Change to today ({today_str})", use_container_width=True, key="card_date_today"
+                f"✅ Change to today ({today_str})",
+                use_container_width=True,
+                key="card_date_today",
             ):
                 st.session_state["change_card_date"] = today_str
                 st.session_state["change_card_step"] = 2
@@ -409,7 +425,11 @@ def render_change_appointment_card(manager: SessionManager) -> bool:
                 st.rerun()
 
         with col2:
-            if st.button(f"📅 Keep {current_date}", use_container_width=True, key="card_date_keep"):
+            if st.button(
+                f"📅 Keep {current_date}",
+                use_container_width=True,
+                key="card_date_keep",
+            ):
                 st.session_state["change_card_date"] = current_date
                 st.session_state["change_card_step"] = 2
                 manager.add_message("user", f"Keep the date as {current_date}")
@@ -461,7 +481,9 @@ def render_change_appointment_card(manager: SessionManager) -> bool:
 
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✅ Keep current doctor", use_container_width=True, key="card_doc_keep"):
+            if st.button(
+                "✅ Keep current doctor", use_container_width=True, key="card_doc_keep"
+            ):
                 st.session_state["change_card_done"] = True
                 st.session_state.pop("change_card_step", None)
                 if manager.agent_state:
@@ -476,16 +498,21 @@ def render_change_appointment_card(manager: SessionManager) -> bool:
                 st.rerun()
 
         with col2:
-            if st.button("🔄 Change doctor", use_container_width=True, key="card_doc_change"):
+            if st.button(
+                "🔄 Change doctor", use_container_width=True, key="card_doc_change"
+            ):
                 st.session_state["change_card_step"] = 3
                 manager.add_message("user", "I want to change the doctor")
                 manager.add_message(
-                    "assistant", "Sure! Here are our available doctors. Please choose one:"
+                    "assistant",
+                    "Sure! Here are our available doctors. Please choose one:",
                 )
                 st.rerun()
 
         custom = st.text_input(
-            "Or type your preference:", key="card_doc_custom", placeholder="e.g. Dr. John Smith..."
+            "Or type your preference:",
+            key="card_doc_custom",
+            placeholder="e.g. Dr. John Smith...",
         )
         if st.button("Send ➤", key="card_doc_send") and custom:
             st.session_state["change_card_done"] = True
@@ -630,7 +657,11 @@ def main():
         # Top bar
         state_dict = manager.get_state_summary()
         patient_name = state_dict.get("patient_name", "")
-        subtitle = f"Hi {patient_name} 👋" if patient_name else "AI-Powered Appointment Scheduling"
+        subtitle = (
+            f"Hi {patient_name} 👋"
+            if patient_name
+            else "AI-Powered Appointment Scheduling"
+        )
         st.markdown(
             f"""
         <div style="background:#fff;border-radius:14px;padding:12px 20px;

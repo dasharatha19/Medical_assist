@@ -54,10 +54,25 @@ def _resolve_relative_date(text: str) -> str:
         return str(today)
     if any(
         word in t
-        for word in ["asap", "as soon as possible", "urgent", "immediately", "right away", "now"]
+        for word in [
+            "asap",
+            "as soon as possible",
+            "urgent",
+            "immediately",
+            "right away",
+            "now",
+        ]
     ):
         return str(today)
-    days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    days = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ]
     for i, day in enumerate(days):
         if day in t:
             delta = (i - today.weekday()) % 7
@@ -107,11 +122,15 @@ def _build_system_prompt(state: dict, doctors_info: str, slots_block: str) -> st
         if not state.get("insurance_member_id"):
             missing_lines.append("  ❓ insurance member ID")
         else:
-            collected_lines.append(f"  ✅ insurance member ID: {state['insurance_member_id']}")
+            collected_lines.append(
+                f"  ✅ insurance member ID: {state['insurance_member_id']}"
+            )
         if not state.get("insurance_group_id"):
             missing_lines.append("  ❓ insurance group ID")
         else:
-            collected_lines.append(f"  ✅ insurance group ID: {state['insurance_group_id']}")
+            collected_lines.append(
+                f"  ✅ insurance group ID: {state['insurance_group_id']}"
+            )
 
     collected_block = "\n".join(collected_lines) if collected_lines else "  (none yet)"
     missing_block = "\n".join(missing_lines) if missing_lines else "  ✅ All collected!"
@@ -362,11 +381,14 @@ def conversation_node(state: dict) -> dict:
 
     # ── 2c. Skip patient name extraction if input is a doctor name ────────────
     _input_is_doctor = any(
-        doc["name"].lower() in user_input.lower() or user_input.lower() in doc["name"].lower()
+        doc["name"].lower() in user_input.lower()
+        or user_input.lower() in doc["name"].lower()
         for doc in available_docs
     )
     if _input_is_doctor:
-        logger.info(f"Input '{user_input}' is doctor name, skipping patient name extraction")
+        logger.info(
+            f"Input '{user_input}' is doctor name, skipping patient name extraction"
+        )
 
     # ── 3. Build slots block (only from real availability check) ──────────────
     slots_block = ""
@@ -492,7 +514,9 @@ def conversation_node(state: dict) -> dict:
             state["preferred_doctor"] = None
             state["available_slots"] = []
             state["selected_time"] = None
-            llm_result["response"] = "No problem! Which doctor would you like to see instead?"
+            llm_result["response"] = (
+                "No problem! Which doctor would you like to see instead?"
+            )
             llm_result["intent"] = "provide_info"
         elif any(x in user_input.lower() for x in ["date", "day", "time", "slot"]):
             state["appointment_date"] = None
@@ -538,9 +562,15 @@ def conversation_node(state: dict) -> dict:
         return state
 
     # ── 8. Patient lookup ─────────────────────────────────────────────────────
-    if state.get("patient_name") and state.get("patient_dob") and not state.get("patient_id"):
+    if (
+        state.get("patient_name")
+        and state.get("patient_dob")
+        and not state.get("patient_id")
+    ):
         try:
-            lookup = tools.patient_lookup.lookup(state["patient_name"], state["patient_dob"])
+            lookup = tools.patient_lookup.lookup(
+                state["patient_name"], state["patient_dob"]
+            )
             state["patient_id"] = lookup.get("patient_id", "NEW")
             state["patient_type"] = lookup.get("status", "new")
             state["appointment_duration"] = lookup.get("duration_minutes", 60)
@@ -578,7 +608,14 @@ def conversation_node(state: dict) -> dict:
 
                 preferred_time = state.get("selected_time") or ""
                 time_match = (
-                    next((s for s in slots if preferred_time in s or s in preferred_time), None)
+                    next(
+                        (
+                            s
+                            for s in slots
+                            if preferred_time in s or s in preferred_time
+                        ),
+                        None,
+                    )
                     if preferred_time
                     else None
                 )
@@ -676,7 +713,13 @@ def conversation_node(state: dict) -> dict:
     missing_after = [f for f in core_fields if not state.get(f)]
 
     carrier = state.get("insurance_carrier", "")
-    if carrier and carrier.lower() not in ["none", "no insurance", "self pay", "out of pocket", ""]:
+    if carrier and carrier.lower() not in [
+        "none",
+        "no insurance",
+        "self pay",
+        "out of pocket",
+        "",
+    ]:
         if not state.get("insurance_member_id"):
             missing_after.append("insurance_member_id")
         if not state.get("insurance_group_id"):
@@ -706,9 +749,9 @@ def conversation_node(state: dict) -> dict:
         "u can confirm",
         "acn confirm",
     ]
-    user_confirming = any(phrase in user_input.lower() for phrase in confirm_phrases) and state.get(
-        "conversation_phase"
-    ) in ["confirming", "collecting", "scheduling"]
+    user_confirming = any(
+        phrase in user_input.lower() for phrase in confirm_phrases
+    ) and state.get("conversation_phase") in ["confirming", "collecting", "scheduling"]
 
     if (llm_result.get("ready_to_book") or user_confirming) and all_collected:
         state["booking_confirmed"] = True
@@ -799,7 +842,9 @@ def _update_state_from_extracted(state: dict, extracted: dict) -> None:
         clean_dob = re.sub(r"(\d+)(st|nd|rd|th)", r"\1", raw_dob, flags=re.IGNORECASE)
         for fmt in dob_formats:
             try:
-                parsed_dob = datetime.strptime(clean_dob.strip(), fmt).strftime("%Y-%m-%d")
+                parsed_dob = datetime.strptime(clean_dob.strip(), fmt).strftime(
+                    "%Y-%m-%d"
+                )
                 break
             except ValueError:
                 continue
@@ -844,7 +889,8 @@ def _update_state_from_extracted(state: dict, extracted: dict) -> None:
         available = state.get("available_doctors", [])
         is_real_doctor = (
             any(
-                d["name"].lower() == new_doc.lower() or new_doc.lower() in d["name"].lower()
+                d["name"].lower() == new_doc.lower()
+                or new_doc.lower() in d["name"].lower()
                 for d in available
             )
             if available
@@ -859,7 +905,9 @@ def _update_state_from_extracted(state: dict, extracted: dict) -> None:
             logger.info(f"Doctor changed: {old_doc} → {new_doc}")
 
     if extracted.get("appointment_date") and not state.get("appointment_date"):
-        valid, _ = SchedulingValidator.validate_appointment_date(extracted["appointment_date"])
+        valid, _ = SchedulingValidator.validate_appointment_date(
+            extracted["appointment_date"]
+        )
         if valid:
             state["appointment_date"] = extracted["appointment_date"]
 
@@ -870,7 +918,8 @@ def _update_state_from_extracted(state: dict, extracted: dict) -> None:
                 (
                     s
                     for s in available
-                    if extracted["selected_time"] in s or s in extracted["selected_time"]
+                    if extracted["selected_time"] in s
+                    or s in extracted["selected_time"]
                 ),
                 None,
             )

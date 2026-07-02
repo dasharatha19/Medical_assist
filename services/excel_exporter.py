@@ -13,7 +13,9 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.worksheet import Worksheet
 
 
-def export_appointment_to_excel(appointment_data: dict, output_dir: str = "files") -> str:
+def export_appointment_to_excel(
+    appointment_data: dict, output_dir: str = "files"
+) -> str:
     """
     Generate a formatted Excel report for admin review.
     Called after appointment is confirmed (step 7).

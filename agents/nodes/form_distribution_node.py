@@ -82,7 +82,9 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
     # =========================================================================
     try:
         # Prepare form creation parameters
-        appointment_datetime = f"{state.get('appointment_date')} {state.get('selected_time')}"
+        appointment_datetime = (
+            f"{state.get('appointment_date')} {state.get('selected_time')}"
+        )
 
         form_result = form_service.create_form_for_appointment(
             appointment_id=state.get("appointment_id"),
@@ -182,7 +184,9 @@ def form_distribution_node(state: SchedulerState) -> SchedulerState:
 
         print("\n   ⏰ Please complete this form before your appointment")
         # print(f"      ({state.get("appointment_date")} with {state.get("preferred_doctor")})")
-        print(f"      ({state.get('appointment_date')} with {state.get('preferred_doctor')})")
+        print(
+            f"      ({state.get('appointment_date')} with {state.get('preferred_doctor')})"
+        )
 
         print(f"\n{'='*70}\n")
 

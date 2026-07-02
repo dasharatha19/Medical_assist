@@ -43,14 +43,20 @@ class VerboseLogger:
         print(f"{Colors.MAGENTA}{'='*60}{Colors.RESET}")
 
     def node_end(self, node_name: str, response: str = ""):
-        print(f"{Colors.GREEN}✅ NODE COMPLETE: {node_name}{Colors.RESET}" f"  [{self._ts()}]")
+        print(
+            f"{Colors.GREEN}✅ NODE COMPLETE: {node_name}{Colors.RESET}"
+            f"  [{self._ts()}]"
+        )
         if response:
             preview = response[:120].replace("\n", " ")
             print(f"{Colors.GREEN}   🤖 Response   : {preview}...{Colors.RESET}")
         print(f"{Colors.MAGENTA}{'-'*60}{Colors.RESET}\n")
 
     def tool_call(self, tool_name: str, params: dict = None):
-        print(f"{Colors.YELLOW}🔧 TOOL CALLED  : {tool_name}{Colors.RESET}" f"  [{self._ts()}]")
+        print(
+            f"{Colors.YELLOW}🔧 TOOL CALLED  : {tool_name}{Colors.RESET}"
+            f"  [{self._ts()}]"
+        )
         if params:
             for k, v in params.items():
                 print(f"{Colors.YELLOW}   ├─ {k}: {v}{Colors.RESET}")
@@ -58,10 +64,15 @@ class VerboseLogger:
     def tool_result(self, tool_name: str, result, success: bool = True):
         icon = "✅" if success else "❌"
         color = Colors.GREEN if success else Colors.RED
-        print(f"{color}{icon} TOOL RESULT    : {tool_name}{Colors.RESET}" f"  [{self._ts()}]")
+        print(
+            f"{color}{icon} TOOL RESULT    : {tool_name}{Colors.RESET}"
+            f"  [{self._ts()}]"
+        )
         if isinstance(result, list):
             for item in result[:5]:
-                name = item.get("name", str(item)) if isinstance(item, dict) else str(item)
+                name = (
+                    item.get("name", str(item)) if isinstance(item, dict) else str(item)
+                )
                 print(f"{color}   ├─ {name}{Colors.RESET}")
         elif isinstance(result, dict):
             for k, v in list(result.items())[:5]:
@@ -71,7 +82,8 @@ class VerboseLogger:
 
     def llm_call(self, provider: str, model: str, phase: str):
         print(
-            f"{Colors.BLUE}🧠 LLM CALL     : {provider} / {model}{Colors.RESET}" f"  [{self._ts()}]"
+            f"{Colors.BLUE}🧠 LLM CALL     : {provider} / {model}{Colors.RESET}"
+            f"  [{self._ts()}]"
         )
         print(f"{Colors.BLUE}   ├─ Phase      : {phase}{Colors.RESET}")
 
@@ -86,7 +98,10 @@ class VerboseLogger:
 
     def state_update(self, field: str, value: str, action: str = "SET"):
         color = Colors.GREEN if action == "SET" else Colors.ORANGE
-        print(f"{color}📝 STATE {action:<6} : {field} = {value}{Colors.RESET}" f"  [{self._ts()}]")
+        print(
+            f"{color}📝 STATE {action:<6} : {field} = {value}{Colors.RESET}"
+            f"  [{self._ts()}]"
+        )
 
     def state_summary(self, state: dict):
         print(f"{Colors.CYAN}📊 STATE SUMMARY:{Colors.RESET}  [{self._ts()}]")
@@ -131,7 +146,9 @@ class VerboseLogger:
                 print(f"{Colors.GREEN}   ├─ {k}: {v}{Colors.RESET}")
 
     def error(self, where: str, msg: str):
-        print(f"{Colors.RED}❌ ERROR in {where}: {msg}{Colors.RESET}" f"  [{self._ts()}]")
+        print(
+            f"{Colors.RED}❌ ERROR in {where}: {msg}{Colors.RESET}" f"  [{self._ts()}]"
+        )
 
     def warning(self, msg: str):
         print(f"{Colors.ORANGE}⚠️  WARNING: {msg}{Colors.RESET}" f"  [{self._ts()}]")
@@ -143,7 +160,10 @@ class VerboseLogger:
         )
 
     def phase_change(self, old: str, new: str):
-        print(f"{Colors.MAGENTA}🔀 PHASE CHANGE : {old} → {new}{Colors.RESET}" f"  [{self._ts()}]")
+        print(
+            f"{Colors.MAGENTA}🔀 PHASE CHANGE : {old} → {new}{Colors.RESET}"
+            f"  [{self._ts()}]"
+        )
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────────

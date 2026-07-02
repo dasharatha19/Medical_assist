@@ -45,7 +45,8 @@ def create_database_if_not_exists():
         conn.autocommit = True
         cur = conn.cursor()
         cur.execute(
-            "SELECT 1 FROM pg_database WHERE datname=%s", (os.getenv("DB_NAME", "medibook"),)
+            "SELECT 1 FROM pg_database WHERE datname=%s",
+            (os.getenv("DB_NAME", "medibook"),),
         )
         if not cur.fetchone():
             cur.execute(f"CREATE DATABASE {os.getenv('DB_NAME', 'medibook')}")
@@ -289,9 +290,7 @@ def seed_doctors():
                     status = (
                         "available"
                         if raw == "available"
-                        else "break"
-                        if raw == "break"
-                        else "unavailable"
+                        else "break" if raw == "break" else "unavailable"
                     )
                 except Exception:
                     status = "unavailable"
@@ -455,7 +454,9 @@ def save_appointment(state: dict) -> str:
             bool(state.get("booking_success")),
             bool(state.get("reminders_setup")),
             bool(state.get("form_sent")),
-            state.get("status", "confirmed" if state.get("booking_confirmed") else "pending"),
+            state.get(
+                "status", "confirmed" if state.get("booking_confirmed") else "pending"
+            ),
             state.get("session_id", ""),
         ),
     )
@@ -480,7 +481,8 @@ def get_appointments_by_session(session_id: str) -> list:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
-        "SELECT * FROM appointments WHERE session_id=%s ORDER BY created_at DESC", (session_id,)
+        "SELECT * FROM appointments WHERE session_id=%s ORDER BY created_at DESC",
+        (session_id,),
     )
     rows = cur.fetchall()
     cur.close()
@@ -625,7 +627,9 @@ def update_form_completed(appointment_id: str) -> bool:
 
 
 # ── Reminders Queries ─────────────────────────────────────────────────────────
-def save_reminders(appointment_id: str, email: str, phone: str, reminders: list) -> bool:
+def save_reminders(
+    appointment_id: str, email: str, phone: str, reminders: list
+) -> bool:
     conn = get_connection()
     cur = conn.cursor()
     for r in reminders:
@@ -656,7 +660,8 @@ def get_reminders(appointment_id: str) -> list:
     conn = get_connection()
     cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cur.execute(
-        "SELECT * FROM reminders WHERE appointment_id=%s ORDER BY scheduled_time", (appointment_id,)
+        "SELECT * FROM reminders WHERE appointment_id=%s ORDER BY scheduled_time",
+        (appointment_id,),
     )
     rows = cur.fetchall()
     cur.close()

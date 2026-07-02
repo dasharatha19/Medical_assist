@@ -53,7 +53,9 @@ class EmailService:
         """
         self.config = config or EmailConfig()
         self.delivery_log = {}
-        logger.info(f"EmailService initialized with SMTP server: {self.config.smtp_server}")
+        logger.info(
+            f"EmailService initialized with SMTP server: {self.config.smtp_server}"
+        )
 
     def send_email(
         self,
@@ -99,7 +101,9 @@ class EmailService:
                     "attempts": attempt + 1,
                     "subject": subject,
                 }
-                logger.info(f"Email sent successfully to {to_email} (attempt {attempt + 1})")
+                logger.info(
+                    f"Email sent successfully to {to_email} (attempt {attempt + 1})"
+                )
                 return True, message
 
             # Log failed attempt
@@ -111,7 +115,9 @@ class EmailService:
                 # Wait before retry
                 import time
 
-                delay = self.config.retry_delay_seconds * (2**attempt)  # Exponential backoff
+                delay = self.config.retry_delay_seconds * (
+                    2**attempt
+                )  # Exponential backoff
                 logger.info(f"Retrying in {delay} seconds...")
                 time.sleep(delay)
 
@@ -170,7 +176,9 @@ class EmailService:
                     part = MIMEBase("application", "octet-stream")
                     part.set_payload(content)
                     encoders.encode_base64(part)
-                    part.add_header("Content-Disposition", f"attachment; filename= {filename}")
+                    part.add_header(
+                        "Content-Disposition", f"attachment; filename= {filename}"
+                    )
                     message.attach(part)
 
             # Send email
@@ -208,7 +216,9 @@ class EmailService:
         pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         return re.match(pattern, email) is not None
 
-    def _handle_test_mode(self, to_email: str, subject: str, body: str) -> tuple[bool, str]:
+    def _handle_test_mode(
+        self, to_email: str, subject: str, body: str
+    ) -> tuple[bool, str]:
         """
         Handle test mode (print instead of sending)
 
