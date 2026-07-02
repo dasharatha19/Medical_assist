@@ -67,11 +67,7 @@ def check_config() -> dict[str, Any]:
     try:
         from utils.config import Config
 
-        if (
-            not Config.GROQ_API_KEY
-            and not Config.GEMINI_API_KEY
-            and not Config.OPENAI_API_KEY
-        ):
+        if not Config.GROQ_API_KEY and not Config.GEMINI_API_KEY and not Config.OPENAI_API_KEY:
             issues.append("No LLM API key configured")
 
         db_url = os.getenv("DATABASE_URL") or os.getenv("DB_HOST")

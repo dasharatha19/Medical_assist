@@ -37,9 +37,9 @@ class NLParser:
             if match:
                 name = match.group(1).strip()
                 # Stop at punctuation or common stop words
-                name = re.split(
-                    r"[,\.\!\?]|\b(and|or|my|the|is|was)\b", name, flags=re.IGNORECASE
-                )[0].strip()
+                name = re.split(r"[,\.\!\?]|\b(and|or|my|the|is|was)\b", name, flags=re.IGNORECASE)[
+                    0
+                ].strip()
                 if name and len(name) >= 2:
                     return name
 

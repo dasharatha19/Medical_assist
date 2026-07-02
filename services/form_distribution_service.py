@@ -88,9 +88,7 @@ class FormDistributionService:
             form_token = str(uuid.uuid4())
 
             # Determine form type
-            form_type = (
-                "Comprehensive Intake Form" if is_new_patient else "Patient Update Form"
-            )
+            form_type = "Comprehensive Intake Form" if is_new_patient else "Patient Update Form"
 
             # Create form structure
             form_data = {
@@ -248,16 +246,12 @@ class FormDistributionService:
             subject, body, html_body = self._generate_form_email(form, patient_name)
 
             # Send email
-            success, message = email_service.send_email(
-                patient_email, subject, body, html_body
-            )
+            success, message = email_service.send_email(patient_email, subject, body, html_body)
 
             # Update form status
             if success:
                 self.forms[appointment_id]["status"]["sent"] = True
-                self.forms[appointment_id]["status"][
-                    "sent_at"
-                ] = datetime.now().isoformat()
+                self.forms[appointment_id]["status"]["sent_at"] = datetime.now().isoformat()
                 self.forms[appointment_id]["status"]["delivery_attempts"] += 1
                 self._save_forms()
 
@@ -275,9 +269,7 @@ class FormDistributionService:
                 self.forms[appointment_id]["status"]["delivery_attempts"] += 1
                 self._save_forms()
 
-                logger.warning(
-                    f"Failed to send form for appointment {appointment_id}: {message}"
-                )
+                logger.warning(f"Failed to send form for appointment {appointment_id}: {message}")
 
             return success, message
 
@@ -285,9 +277,7 @@ class FormDistributionService:
             logger.error(f"Error sending form: {str(e)}")
             return False, str(e)
 
-    def _generate_form_email(
-        self, form: dict, patient_name: str
-    ) -> tuple[str, str, str]:
+    def _generate_form_email(self, form: dict, patient_name: str) -> tuple[str, str, str]:
         """
         Generate form email subject, plain text, and HTML content
 
@@ -656,9 +646,7 @@ Medical Appointment Scheduler
         except Exception as e:
             logger.error(f"Error saving delivery log: {e}")
 
-    def _log_delivery(
-        self, appointment_id: str, email: str, event_type: str, message: str
-    ):
+    def _log_delivery(self, appointment_id: str, email: str, event_type: str, message: str):
         """
         Log form delivery event
 

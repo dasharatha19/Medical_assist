@@ -16,9 +16,7 @@ from services import patient_service, scheduling_service
 class BookingTool:
     """Tool for booking appointments"""
 
-    def book(
-        self, patient_id: str, doctor: str, date: str, time: str, duration: int
-    ) -> dict:
+    def book(self, patient_id: str, doctor: str, date: str, time: str, duration: int) -> dict:
         """
         Book an appointment (ONLY after confirmation)
         Calls:
@@ -36,9 +34,7 @@ class BookingTool:
             dict with booking result and appointment ID
         """
         # Reserve the slot
-        reserve_result = scheduling_service.reserve_slot(
-            doctor, date, time, patient_id, duration
-        )
+        reserve_result = scheduling_service.reserve_slot(doctor, date, time, patient_id, duration)
 
         if not reserve_result["success"]:
             return {

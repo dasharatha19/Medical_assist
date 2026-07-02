@@ -55,16 +55,13 @@ class ReminderService:
                         "position": 2,
                         "type": "General Reminder",
                         "time_before": "24 hours",
-                        "message": f"Appointment tomorrow "
-                        f"at "
-                        f'{apt_dt.strftime("%H:%M")}.',
+                        "message": f"Appointment tomorrow " f"at " f'{apt_dt.strftime("%H:%M")}.',
                     },
                     {
                         "position": 3,
                         "type": "Confirmation",
                         "time_before": "1 hour",
-                        "message": "Your appointment is in "
-                        "1 hour. Confirm or cancel.",
+                        "message": "Your appointment is in " "1 hour. Confirm or cancel.",
                     },
                 ],
             }

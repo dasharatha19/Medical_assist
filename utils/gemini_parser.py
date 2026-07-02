@@ -101,9 +101,7 @@ Return valid JSON response:
 
         try:
             prompt = self.EXTRACTION_TEMPLATE.format(user_input=user_input.strip())
-            response = self.client.models.generate_content(
-                model=self.model_name, contents=prompt
-            )
+            response = self.client.models.generate_content(model=self.model_name, contents=prompt)
 
             if not response or not response.text:
                 return False, {}
@@ -159,11 +157,7 @@ Return valid JSON response:
         # Phone validation
         if fields.get("phone"):
             phone = (
-                fields["phone"]
-                .replace(" ", "")
-                .replace("-", "")
-                .replace("(", "")
-                .replace(")", "")
+                fields["phone"].replace(" ", "").replace("-", "").replace("(", "").replace(")", "")
             )
             if len(phone) >= 10 and phone.isdigit():
                 cleaned["phone"] = phone
@@ -181,17 +175,13 @@ Return valid JSON response:
                 cleaned["location"] = location
 
         # Doctor preference
-        if fields.get("doctor_preference") and isinstance(
-            fields["doctor_preference"], str
-        ):
+        if fields.get("doctor_preference") and isinstance(fields["doctor_preference"], str):
             doc_pref = fields["doctor_preference"].strip()
             if doc_pref:
                 cleaned["doctor_preference"] = doc_pref
 
         # Insurance info
-        if fields.get("insurance_provider") and isinstance(
-            fields["insurance_provider"], str
-        ):
+        if fields.get("insurance_provider") and isinstance(fields["insurance_provider"], str):
             provider = fields["insurance_provider"].strip()
             if provider:
                 cleaned["insurance_provider"] = provider

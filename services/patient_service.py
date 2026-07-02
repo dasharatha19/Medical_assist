@@ -46,9 +46,7 @@ class PatientService:
                 "duration_minutes": 60,
             }
 
-    def update_patient_preferences(
-        self, patient_id: str, doctor: str, location: str
-    ) -> bool:
+    def update_patient_preferences(self, patient_id: str, doctor: str, location: str) -> bool:
         try:
             from database.db import get_connection
 

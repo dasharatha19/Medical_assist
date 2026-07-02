@@ -166,9 +166,7 @@ def extract_state_from_output(output: str) -> dict:
     return state_info
 
 
-def format_conversation_context(
-    user_message: str, agent_response: str
-) -> tuple[str, str]:
+def format_conversation_context(user_message: str, agent_response: str) -> tuple[str, str]:
     """
     Format user message and agent response for display
     Ensures proper formatting and readability

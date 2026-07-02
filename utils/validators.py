@@ -198,9 +198,7 @@ class ContactValidator:
             return True, f"({digits_only[:3]}) {digits_only[3:6]}-{digits_only[6:]}"
 
         # For other lengths, just return digits with dashes
-        return True, "-".join(
-            [digits_only[i : i + 3] for i in range(0, len(digits_only), 3)]
-        )
+        return True, "-".join([digits_only[i : i + 3] for i in range(0, len(digits_only), 3)])
 
 
 class SchedulingValidator:
@@ -300,9 +298,7 @@ class SchedulingValidator:
         )
 
     @staticmethod
-    def validate_doctor_name(
-        doctor_name: str, available_doctors: list[str]
-    ) -> tuple[bool, str]:
+    def validate_doctor_name(doctor_name: str, available_doctors: list[str]) -> tuple[bool, str]:
         """
         Validate doctor name against available doctors
 
@@ -324,9 +320,7 @@ class SchedulingValidator:
                 return True, doc
 
         # Check for partial matches or typos
-        matches = [
-            doc for doc in available_doctors if doctor_name.lower() in doc.lower()
-        ]
+        matches = [doc for doc in available_doctors if doctor_name.lower() in doc.lower()]
         if matches:
             return False, f"Did you mean: {', '.join(matches)}?"
 
@@ -365,9 +359,7 @@ class InsuranceValidator:
     """Validators for insurance information"""
 
     @staticmethod
-    def validate_insurance_carrier(
-        carrier: str, valid_carriers: list[str]
-    ) -> tuple[bool, str]:
+    def validate_insurance_carrier(carrier: str, valid_carriers: list[str]) -> tuple[bool, str]:
         """
         Validate insurance carrier
 
@@ -617,9 +609,7 @@ class EdgeCaseValidator:
             try:
                 existing_start_str = f"{apt['date']} {apt['time']}"
                 existing_start = datetime.strptime(existing_start_str, "%Y-%m-%d %H:%M")
-                existing_end = existing_start + timedelta(
-                    minutes=apt.get("duration", 30)
-                )
+                existing_end = existing_start + timedelta(minutes=apt.get("duration", 30))
 
                 # Check if there's overlap
                 if (new_start < existing_end) and (new_end > existing_start):
@@ -650,9 +640,7 @@ class EdgeCaseValidator:
         return True, "Existing patient found"
 
     @staticmethod
-    def check_appointment_completeness(
-        state_dict: dict[str, str]
-    ) -> tuple[bool, list[str]]:
+    def check_appointment_completeness(state_dict: dict[str, str]) -> tuple[bool, list[str]]:
         """
         Check if all required appointment fields are filled
 

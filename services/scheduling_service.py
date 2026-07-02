@@ -30,8 +30,7 @@ class SchedulingService:
                     "location": info.get("location", "Main Clinic"),
                     "conditions": info.get("conditions", ""),
                     "hours": (
-                        f"{info['working_hours']['start']} - "
-                        f"{info['working_hours']['end']}"
+                        f"{info['working_hours']['start']} - " f"{info['working_hours']['end']}"
                     ),
                 }
             )

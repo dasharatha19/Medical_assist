@@ -13,9 +13,7 @@ from services import reminder_service
 class ReminderTool:
     """Tool for appointment reminders"""
 
-    def setup(
-        self, appointment_id: str, appointment_datetime: str, email: str, phone: str
-    ) -> dict:
+    def setup(self, appointment_id: str, appointment_datetime: str, email: str, phone: str) -> dict:
         """
         Setup 3-tier reminder system (AFTER booking confirmation)
         Calls ReminderService.setup_appointment_reminders()

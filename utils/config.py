@@ -33,21 +33,13 @@ class Config:
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 
     # Feature flags
-    USE_LLM_FOR_PARSING: bool = (
-        os.getenv("USE_LLM_FOR_PARSING", "true").lower() == "true"
-    )
+    USE_LLM_FOR_PARSING: bool = os.getenv("USE_LLM_FOR_PARSING", "true").lower() == "true"
     USE_LLM_FOR_DOCTOR_SELECTION: bool = (
         os.getenv("USE_LLM_FOR_DOCTOR_SELECTION", "true").lower() == "true"
     )
-    USE_LLM_FOR_INSURANCE: bool = (
-        os.getenv("USE_LLM_FOR_INSURANCE", "true").lower() == "true"
-    )
-    FALLBACK_TO_RULE_BASED: bool = (
-        os.getenv("FALLBACK_TO_RULE_BASED", "true").lower() == "true"
-    )
-    REQUIRE_LLM_SUCCESS: bool = (
-        os.getenv("REQUIRE_LLM_SUCCESS", "false").lower() == "true"
-    )
+    USE_LLM_FOR_INSURANCE: bool = os.getenv("USE_LLM_FOR_INSURANCE", "true").lower() == "true"
+    FALLBACK_TO_RULE_BASED: bool = os.getenv("FALLBACK_TO_RULE_BASED", "true").lower() == "true"
+    REQUIRE_LLM_SUCCESS: bool = os.getenv("REQUIRE_LLM_SUCCESS", "false").lower() == "true"
 
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")

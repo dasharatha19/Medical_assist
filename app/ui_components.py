@@ -469,9 +469,7 @@ def render_chat_history(messages: list[dict[str, str]]) -> None:
     """Render full conversation history."""
     st.markdown('<div class="chat-wrapper">', unsafe_allow_html=True)
     for message in messages:
-        render_chat_message(
-            message.get("role", "assistant"), message.get("content", "")
-        )
+        render_chat_message(message.get("role", "assistant"), message.get("content", ""))
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -551,9 +549,7 @@ def render_sidebar_info(state_dict: dict, manager=None) -> None:
                     appt_date = appt.get("appointment_date", "")
                     appt_id = appt.get("appointment_id", "")
                     label = f"👤 {name} · {doctor} · {appt_date}"
-                    if st.button(
-                        label, key=f"sidebar_appt_{appt_id}", use_container_width=True
-                    ):
+                    if st.button(label, key=f"sidebar_appt_{appt_id}", use_container_width=True):
                         st.session_state["viewed_appt"] = appt
                         st.rerun()
             else:
@@ -620,9 +616,7 @@ def render_state_info(state_dict: dict) -> None:
         )
 
     if rows_html:
-        st.markdown(
-            f'<div class="booking-card">{rows_html}</div>', unsafe_allow_html=True
-        )
+        st.markdown(f'<div class="booking-card">{rows_html}</div>', unsafe_allow_html=True)
     else:
         st.markdown(
             '<div class="booking-card"><span class="bval-pending" '
@@ -631,9 +625,7 @@ def render_state_info(state_dict: dict) -> None:
         )
 
 
-def render_workflow_status(
-    complete: bool, success: bool = False, error: str = ""
-) -> None:
+def render_workflow_status(complete: bool, success: bool = False, error: str = "") -> None:
     """Show workflow completion state."""
     if not complete:
         return

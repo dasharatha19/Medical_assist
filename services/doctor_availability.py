@@ -57,15 +57,11 @@ class DoctorAvailability:
 
     def validate_date(self, date_str: str) -> bool:
         try:
-            return (
-                datetime.strptime(date_str, "%Y-%m-%d").date() >= datetime.now().date()
-            )
+            return datetime.strptime(date_str, "%Y-%m-%d").date() >= datetime.now().date()
         except ValueError:
             return False
 
-    def get_available_slots(
-        self, doctor_name: str, date: str, duration: int
-    ) -> list[str]:
+    def get_available_slots(self, doctor_name: str, date: str, duration: int) -> list[str]:
         """Get available slots using DB as source of truth."""
         doctors = self._get_all_doctors_from_db()
         if doctor_name not in doctors:
@@ -126,9 +122,7 @@ class DoctorAvailability:
                 continue
 
             # Skip if overlaps existing appointment
-            if self._overlaps_existing(
-                current, slot_end, booked_appointments, base_date
-            ):
+            if self._overlaps_existing(current, slot_end, booked_appointments, base_date):
                 current += timedelta(minutes=30)
                 continue
 

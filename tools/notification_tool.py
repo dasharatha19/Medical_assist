@@ -71,12 +71,8 @@ class NotificationTool:
 
             form_token = str(uuid.uuid4())
             form_id = f"FORM{uuid.uuid4().hex[:6].upper()}"
-            form_type = (
-                "Comprehensive Intake Form" if is_new_patient else "Patient Update Form"
-            )
-            form_url = (
-                f"https://forms.medical-scheduler.com" f"/patient-form/{form_token}"
-            )
+            form_type = "Comprehensive Intake Form" if is_new_patient else "Patient Update Form"
+            form_url = f"https://forms.medical-scheduler.com" f"/patient-form/{form_token}"
 
             save_form(
                 {

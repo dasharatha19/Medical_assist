@@ -111,9 +111,7 @@ class LLMProvider:
                 return response.choices[0].message.content
 
             elif self.provider == "gemini":
-                response = self.client.models.generate_content(
-                    model=self.model, contents=prompt
-                )
+                response = self.client.models.generate_content(model=self.model, contents=prompt)
                 return response.text
 
             elif self.provider == "openai":

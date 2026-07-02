@@ -169,9 +169,7 @@ class PromptLoader:
 
         raise ValueError(f"Item '{item_name}' not found in {prompt_name}")
 
-    def get_section_safe(
-        self, prompt_name: str, section: str, default: str | None = None
-    ) -> str:
+    def get_section_safe(self, prompt_name: str, section: str, default: str | None = None) -> str:
         """
         Safely get a section from a prompt, with fallback to default.
 
@@ -381,9 +379,7 @@ def get_prompt_text(prompt_name: str, item_name: str) -> str:
     return get_loader().get_prompt_text(prompt_name, item_name)
 
 
-def get_prompt_text_safe(
-    prompt_name: str, item_name: str, default: str | None = None
-) -> str:
+def get_prompt_text_safe(prompt_name: str, item_name: str, default: str | None = None) -> str:
     """Shorthand: Get specific prompt text with safe fallback."""
     return get_loader().get_prompt_text_safe(prompt_name, item_name, default)
 
